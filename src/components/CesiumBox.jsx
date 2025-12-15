@@ -121,7 +121,7 @@ export default function CesiumMap() {
 
   return (
     <>
-      {/* Loading overlay */}
+      /* {/* Loading overlay */}
       {loading && (
         <div
           style={{
@@ -139,7 +139,7 @@ export default function CesiumMap() {
         >
           Loading map…
         </div>
-      )}
+      )} */
 
       {/* Cesium container */}
       <div
