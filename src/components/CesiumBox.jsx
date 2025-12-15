@@ -121,33 +121,13 @@ export default function CesiumMap() {
 
   return (
     <>
-      /* {/* Loading overlay */}
-      {loading && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "#0b0b0b",
-            color: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10,
-            fontSize: "18px",
-            letterSpacing: "0.5px",
-          }}
-        >
-          Loading map…
-        </div>
-      )} */
-
       {/* Cesium container */}
       <div
         ref={containerRef}
         style={{
           width: "100vw",
           height: "100vh",
-          visibility: loading ? "hidden" : "visible",
+          // visibility: loading ? "hidden" : "visible",
         }}
       />
     </>
