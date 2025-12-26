@@ -143,7 +143,7 @@ export default function CesiumMap() {
           const modelId = picked.id.modelId;
           const model = MODEL_LOOKUP[modelId];
 
-          console.log(model, modelId, 'modelId') ; 
+          console.log(model, modelId, picked?.detail?.node?._name, 'HELLO'); 
           
           if (model) {
             const rawNodeName = picked.detail.node._name;
