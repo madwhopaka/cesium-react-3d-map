@@ -10,11 +10,11 @@ export const MODELS = [
   {
     id: "tower_1",
     name: "Tower 1 - Mountain Area",
-    lon: 138.7274,
-    lat: 35.3606,
-    altitude: 4000,           // Ground level
-    towerHeight: 600,      // Tower is 100m tall (realistic for communication tower)
-    scale: 10,
+    lon: 139.445180,
+    lat: 36.341518,
+    altitude: 129 ,         
+    towerHeight: 100,   
+    scale: 2,
     uri: "/models/Tower 1.glb",
     parts: {
       'blip 1 (lightning arrestor)': {
