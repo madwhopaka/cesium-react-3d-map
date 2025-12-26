@@ -8,20 +8,39 @@ export default function ModelsPanel({ models, isOpen, onToggle, onSelectModel })
   return (
     <div
       style={{
-        position: "fixed",
-        top: 20,
-        left: 20,
-        zIndex: 10,
-        background: "rgba(15, 23, 42, 0.95)",
-        backdropFilter: "blur(12px)",
-        borderRadius: "16px",
-        border: "2px solid #334155",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-        overflow: "hidden",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        width: isOpen ? "280px" : "56px",
-        maxHeight: "calc(100vh - 40px)",
-      }}
+  position: "fixed",
+  top: 20,
+  left: 20,
+  zIndex: 10,
+
+  background: "rgba(15, 23, 42, 0.95)",
+  backdropFilter: "blur(12px)",
+
+  borderRadius: "16px",
+  border: "2px solid #334155",
+  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
+
+  overflow: "hidden",
+
+  /* 🔑 SMOOTH ANIMATION CORE */
+  width: isOpen ? "280px" : "56px",
+  transform: isOpen
+    ? "translateX(0) scale(1)"
+    : "translateX(0) scale(0.98)",
+
+  opacity: isOpen ? 1 : 0.95,
+
+  transition: `
+    width 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 320ms ease-out,
+    opacity 220ms ease-out
+  `,
+
+  willChange: "width, transform, opacity",
+
+  maxHeight: "calc(100vh - 40px)",
+}}
+
     >
       {/* Header */}
       <div

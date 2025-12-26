@@ -59,7 +59,7 @@ export default function CesiumMap() {
         animation: false,
         baseLayerPicker: false,
         geocoder: false,
-        navigationHelpButton: false,
+        navigationHelpButton: true,
         infoBox: false,
         selectionIndicator: false,
       });
@@ -69,9 +69,12 @@ export default function CesiumMap() {
       const controller = viewer.scene.screenSpaceCameraController;
       controller.enableLook = false;
 
+      // ENHANCED LIGHTING FOR MODELS
       viewer.scene.globe.enableLighting = true;
       viewer.scene.highDynamicRange = true;
+      
       viewer.scene.light = new Cesium.SunLight();
+      // Add ambient lighting by brightening the globe base color
 
       const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(
         CESIUM_CONFIG.TILESET_ASSET_ID
@@ -134,15 +137,22 @@ export default function CesiumMap() {
       handler.setInputAction((movement) => {
         const picked = viewer.scene.pick(movement.position);
 
+        console.log(picked?.detail, picked?.id, 'Picked', 'Hello'); 
         // Check if clicked on a model part
         if (picked?.detail?.node && picked?.id) {
           const modelId = picked.id.modelId;
           const model = MODEL_LOOKUP[modelId];
+
+          console.log(model, modelId, 'modelId') ; 
           
           if (model) {
             const rawNodeName = picked.detail.node._name;
             const partKey = normalizeNodeName(rawNodeName);
-            const part = model.parts?.[partKey];
+            let part = model.parts?.[partKey];
+
+            if (!part) {
+              part = model.parts?.[rawNodeName]; 
+            }
             
             if (part) {
               setActiveModal({
@@ -202,7 +212,50 @@ export default function CesiumMap() {
     return () => viewer && !viewer.isDestroyed() && viewer.destroy();
   }, []);
 
-  /* ---------------- ORBIT TOGGLE ---------------- */
+  /* ---------------- FLY TO MODEL - FIXED ---------------- */
+  const flyToModel = (modelId) => {
+    const viewer = viewerRef.current;
+    const entity = entityMapRef.current[modelId];
+    const model = MODEL_LOOKUP[modelId];
+    if (!viewer || !entity || !model) return;
+
+    console.log(`✈️ Flying to: ${model.name}`);
+    
+    entity.show = true;
+    activeModelRef.current = model;
+    isFlyingRef.current = true;
+    
+    // Calculate viewing position
+    const distance = model.towerHeight * 2; // 2x tower height away
+    const targetHeight = model.altitude + (model.towerHeight * 0.6); // Look at 60% up the tower
+    
+    const target = Cesium.Cartesian3.fromDegrees(
+      model.lon,
+      model.lat,
+      targetHeight
+    );
+    
+    viewer.camera.flyToBoundingSphere(
+      new Cesium.BoundingSphere(target, distance),
+      {
+        duration: 2.5,
+        offset: new Cesium.HeadingPitchRange(
+          Cesium.Math.toRadians(45),  // Northeast view
+          Cesium.Math.toRadians(-30), // Looking slightly down
+          distance
+        ),
+        complete: () => {
+          isFlyingRef.current = false;
+          console.log(`✅ Arrived at ${model.name}`);
+        },
+      }
+    );
+
+    setPanelOpen(false); 
+    console.log(`📏 Distance: ${Math.round(distance)}m, Target height: ${Math.round(targetHeight)}m`);
+  };
+
+  /* ---------------- ORBIT TOGGLE - FIXED ---------------- */
   const toggleOrbit = () => {
     const viewer = viewerRef.current;
     const model = activeModelRef.current;
@@ -211,56 +264,41 @@ export default function CesiumMap() {
     const controller = viewer.scene.screenSpaceCameraController;
 
     if (!orbitLockedRef.current) {
-      /* ----------------------------------
-         1️⃣ Define orbit center
-      ---------------------------------- */
-      const centerHeight =
-        model.altitude + Math.max(model.towerHeight * 0.5, 150);
-
+      console.log(`🔒 Enabling orbit for: ${model.name}`);
+      
+      // Orbit center at middle of tower (no forced minimum)
+      const centerHeight = model.altitude + (model.towerHeight * 0.5);
+      
       const center = Cesium.Cartesian3.fromDegrees(
         model.lon,
         model.lat,
         centerHeight
       );
 
-      /* ----------------------------------
-         2️⃣ KEEP CAMERA POSITION
-      ---------------------------------- */
-      const cameraPos = viewer.camera.positionWC.clone();
-
-      /* ----------------------------------
-         3️⃣ FORCE CAMERA TO LOOK AT MODEL
-         (THIS IS THE CRITICAL STEP)
-      ---------------------------------- */
-      viewer.camera.lookAt(
-        center,
-        new Cesium.Cartesian3(
-          cameraPos.x - center.x,
-          cameraPos.y - center.y,
-          cameraPos.z - center.z
-        )
+      // Create transform at orbit center
+      const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+      
+      // Get current camera position in world coordinates
+      const cameraPosition = viewer.camera.positionWC.clone();
+      
+      // Convert camera position to local coordinates relative to orbit center
+      const inverseTransform = Cesium.Matrix4.inverse(
+        transform,
+        new Cesium.Matrix4()
+      );
+      
+      const localPosition = Cesium.Matrix4.multiplyByPoint(
+        inverseTransform,
+        cameraPosition,
+        new Cesium.Cartesian3()
       );
 
-      /* ----------------------------------
-         4️⃣ ENABLE ORBIT MODE
-      ---------------------------------- */
-      const transform =
-        Cesium.Transforms.eastNorthUpToFixedFrame(center);
+      // Apply the transform with the local offset
+      viewer.camera.lookAtTransform(transform, localPosition);
 
-      viewer.camera.lookAtTransform(transform);
-
-      /* ----------------------------------
-         5️⃣ Orbit-safe controls
-      ---------------------------------- */
-      controller.minimumZoomDistance = Math.max(
-        model.towerHeight * 0.4,
-        40
-      );
-
-      controller.maximumZoomDistance = Math.max(
-        model.towerHeight * 10,
-        600
-      );
+      // Set zoom constraints relative to tower
+      controller.minimumZoomDistance = model.towerHeight * 0.1;
+      controller.maximumZoomDistance = model.towerHeight * 3;
 
       controller.inertiaZoom = 0.85;
       controller.inertiaSpin = 0.9;
@@ -268,12 +306,15 @@ export default function CesiumMap() {
 
       orbitLockedRef.current = true;
       setOrbitLocked(true);
+      
+      console.log(`✅ Orbit enabled - center: ${Math.round(centerHeight)}m, min: ${Math.round(model.towerHeight * 0.1)}m, max: ${Math.round(model.towerHeight * 3)}m`);
     } else {
-      /* ----------------------------------
-         EXIT ORBIT CLEANLY
-      ---------------------------------- */
+      console.log("🔓 Disabling orbit");
+      
+      // Exit orbit mode
       viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
 
+      // Reset constraints
       controller.minimumZoomDistance = 1;
       controller.maximumZoomDistance = Number.POSITIVE_INFINITY;
 
@@ -293,14 +334,7 @@ export default function CesiumMap() {
         models={MODELS}
         isOpen={panelOpen}
         onToggle={() => setPanelOpen((v) => !v)}
-        onSelectModel={(id) => {
-          const entity = entityMapRef.current[id];
-          if (entity) {
-            entity.show = true;
-            activeModelRef.current = MODEL_LOOKUP[id];
-            viewerRef.current.flyTo(entity);
-          }
-        }}
+        onSelectModel={flyToModel}
       />
       <div ref={containerRef} style={{ position: "fixed", inset: 0 }} />
       <PartModal modal={activeModal} onClose={() => setActiveModal(null)} />

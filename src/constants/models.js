@@ -87,9 +87,9 @@ export const MODELS = [
     name: "Tower 3 - Open Flat Land",
     lon: 139.198034,
     lat: 35.282485,
-    altitude: 60,           // Flat ground
-    towerHeight: 150,      // Standard lattice tower
-    scale: 16,
+    altitude: 57,           // Flat ground
+    towerHeight: 50,      // Standard lattice tower
+    scale: 10,
     uri: "/models/Tower 3 with blips.glb",
     parts: {
       "blip 1 (sector panel antennas)": {
@@ -103,7 +103,7 @@ export const MODELS = [
         material:
           "RF-transparent radome, aluminum/copper radiating elements",
       },
-      "blip 2 (microwave backhaul dish)": {
+      'Blip 2 (Microwave Dish Antenna)': {
         label: "Microwave Backhaul Dish Antenna",
         icon: "📶",
         position: "Mounted at mid-height of the tower",

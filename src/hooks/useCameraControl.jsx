@@ -34,12 +34,19 @@ export function useCameraControls({
       models.forEach((m) => {
         const e = entityMapRef.current[m.id];
         const b = blipMapRef.current[m.id];
+        
         if (!e || !b) return;
 
         const d = getDistanceToModel(m, camPos, Cesium);
         if (d < getVisibilityThreshold(m) * 1.2) {
           e.show = true;
           b.show = false;
+          
+          // Show part markers
+          if (e.partMarkers) {
+            e.partMarkers.forEach(marker => marker.show = true);
+          }
+          
           anyVisible = true;
 
           if (d < closestDist) {
@@ -49,6 +56,11 @@ export function useCameraControls({
         } else {
           e.show = false;
           b.show = true;
+          
+          // Hide part markers
+          if (e.partMarkers) {
+            e.partMarkers.forEach(marker => marker.show = false);
+          }
         }
       });
 

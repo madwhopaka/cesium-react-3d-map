@@ -8,7 +8,7 @@ const App = () => {
   return (
     <div className="App">
       {/* <Map3D /> */}
-      <div className='w-full h-screen text-red-400'>Helloooo</div>
+      {/* <div className='w-full h-screen text-red-400'>Helloooo</div> */}
       <CesiumMap />
     </div>
   );
