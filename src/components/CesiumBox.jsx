@@ -55,6 +55,7 @@ export default function CesiumMap() {
     const init = async () => {
       viewer = new Cesium.Viewer(containerRef.current, {
         terrain: Cesium.Terrain.fromWorldTerrain(),
+        sceneModePicker: false,
         timeline: false,
         animation: false,
         baseLayerPicker: false,
@@ -143,7 +144,7 @@ export default function CesiumMap() {
           const modelId = picked.id.modelId;
           const model = MODEL_LOOKUP[modelId];
 
-          console.log(model, modelId, 'modelId') ; 
+          console.log(model, modelId, picked?.detail?.node?._name, 'HELLO'); 
           
           if (model) {
             const rawNodeName = picked.detail.node._name;
@@ -338,11 +339,12 @@ export default function CesiumMap() {
       />
       <div ref={containerRef} style={{ position: "fixed", inset: 0 }} />
       <PartModal modal={activeModal} onClose={() => setActiveModal(null)} />
-      <OrbitLockButton
+    {/* <OrbitLockButton
         isVisible={isModelVisible}
         isLocked={orbitLocked}
         onToggle={toggleOrbit}
-      />
+      />//
+    </>*/}
     </>
   );
 }
