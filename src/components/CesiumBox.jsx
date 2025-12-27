@@ -123,6 +123,39 @@ export default function CesiumMap() {
 
       setEntitiesReady(true);
 
+      // ====== Camera Distance Visibility Control ======
+      const onCameraChange = () => {
+        const cameraPos = viewer.camera.positionWC;
+
+        MODELS.forEach((model) => {
+          const entity = entityMapRef.current[model.id];
+          const blip = blipMapRef.current[model.id];
+          if (!entity || !blip) return;
+
+          const modelPos = Cesium.Cartesian3.fromDegrees(
+            model.lon,
+            model.lat,
+            model.altitude
+          );
+          const distance = Cesium.Cartesian3.distance(cameraPos, modelPos);
+          const threshold = model.towerHeight * 8;
+
+          if (distance < threshold * 1.2) {
+            entity.show = true;
+            blip.show = false;
+          } else {
+            entity.show = false;
+            blip.show = true;
+          }
+        });
+      };
+
+      // Store listener reference for removal during flyTo
+      viewer.cameraChangeListener = onCameraChange;
+      viewer.camera.changed.addEventListener(onCameraChange);
+      onCameraChange();
+      // ====== END ADDED ======
+
       // --- Click Handler (parts + coords) ---
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handler.setInputAction((movement) => {
@@ -146,6 +179,38 @@ export default function CesiumMap() {
             }
           }
         }
+
+        // Get coordinates for any click (terrain/tiles)
+        const scene = viewer.scene;
+        const camera = viewer.camera;
+        let cartesian;
+
+        // Try picking position from 3D tiles / terrain
+        if (scene.pickPositionSupported) {
+          cartesian = scene.pickPosition(movement.position);
+        }
+
+        // Fallback to globe intersection
+        if (!Cesium.defined(cartesian)) {
+          const ray = camera.getPickRay(movement.position);
+          cartesian = scene.globe.pick(ray, scene);
+        }
+
+        if (!Cesium.defined(cartesian)) {
+          console.log("❌ No position detected");
+          return;
+        }
+
+        // Convert to lat / lon / height
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const lon = Cesium.Math.toDegrees(cartographic.longitude);
+        const lat = Cesium.Math.toDegrees(cartographic.latitude);
+        const height = cartographic.height;
+
+        console.log("📍 Clicked Coordinates:");
+        console.log("  Longitude:", lon.toFixed(6));
+        console.log("  Latitude :", lat.toFixed(6));
+        console.log("  Height   :", height.toFixed(2), "m");
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     };
     init();
@@ -219,6 +284,11 @@ const flyToModel = (modelId) => {
     // Show loader
     setIsLoading3D(true);
     
+    // REMOVE camera listener during flyTo to prevent interference
+    if (viewer.cameraChangeListener) {
+      viewer.camera.changed.removeEventListener(viewer.cameraChangeListener);
+    }
+    
     entity.show = true;
     activeModelRef.current = model;
     isFlyingRef.current = true;
@@ -270,9 +340,16 @@ const flyToModel = (modelId) => {
           new Cesium.HeadingPitchRange(finalHeading, finalPitch, distance)
         );
         
-        // Then unlock it
+        // Then unlock it and re-enable camera listener
         setTimeout(() => {
           viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+          
+          // RE-ADD camera listener after flyTo completes
+          if (viewer.cameraChangeListener) {
+            viewer.camera.changed.addEventListener(viewer.cameraChangeListener);
+            viewer.cameraChangeListener(); // Run once to update visibility
+          }
+          
           setIsLoading3D(false);
           isFlyingRef.current = false;
           console.log(`✅ Arrived at ${model.name}`);

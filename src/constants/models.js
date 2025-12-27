@@ -10,9 +10,9 @@ export const MODELS = [
   {
     id: "tower_1",
     name: "Tower 1 - Mountain Area",
-    lon: 139.445180,
-    lat: 36.341518,
-    altitude: 129 ,         
+    lon: 139.446046,
+    lat: 36.343633,
+    altitude: 177 ,         
     towerHeight: 100,   
     scale: 2,
     uri: "/models/Tower 1.glb",
@@ -84,9 +84,9 @@ export const MODELS = [
     name: "Tower 2 - Building Top",
     lon: 139.696634,
     lat: 35.689771,
-    altitude: 115.85,         // On top of 150m building
+    altitude: 115.80,         // On top of 150m building
     towerHeight: 20,       // Tower is 60m tall
-    scale: 20,
+    scale: 18,
     uri: "/models/Tower 2.glb",
     parts: {
       'blip 1 (massive mimo antennas)': {
@@ -178,7 +178,7 @@ export const MODELS = [
     name: "Tower 3 - Open Flat Land",
     lon: 139.339381,
     lat: 35.369106,
-    altitude: 46,           // Flat ground
+    altitude: 45.90,           // Flat ground
     towerHeight: 50,      // Standard lattice tower
     scale: 10,
     uri: "/models/Tower 3.glb",
