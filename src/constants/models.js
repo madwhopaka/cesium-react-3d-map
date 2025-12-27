@@ -25,23 +25,23 @@ export const MODELS = [
         purpose: "Lightning protection: Safely directs lightning energy into tower grounding system. Radio communication: Used for low-power links such as monitoring, control, or backup communication",
         material: "Lightning rod: Copper or copper-clad steel. Antenna elements: Aluminum or copper. Outer cover (radome): UV-resistant fiberglass or plastic. Internal grounding parts: Copper"
       },
-
+  
       "Red side supports": {
-        label: "Lightning Arrestor with RF Omni Antenna",
-        icon: "⚡",
-        position: "Installed at the absolute top of the tower",
-        positionReason: "Highest point to intercept lightning strikes and provide maximum unobstructed signal coverage",
-        purpose: "Lightning protection: Safely directs lightning energy into tower grounding system. Radio communication: Used for low-power links such as monitoring, control, or backup communication",
-        material: "Lightning rod: Copper or copper-clad steel. Antenna elements: Aluminum or copper. Outer cover (radome): UV-resistant fiberglass or plastic. Internal grounding parts: Copper"
+        label: "Sector Panel Antennas",
+        icon: "📡",
+        position: "Installed near the top of the mobile tower, below the lightning protection system",
+        positionReason: "Mounted on multiple sides to create sectors (typically 3 × 120° coverage). Positioned at high elevation to maximize coverage area and minimize signal obstruction",
+        purpose: "Primary interface between mobile network and user devices. Transmits/receives radio signals for 2G, 3G, 4G LTE, and 5G NR. Multiple panels allow directional coverage, higher user capacity, and reduced interference",
+        material: "Radome: Fiberglass-reinforced plastic (FRP) or RF-transparent polymer, UV-resistant. Internal elements: Copper or aluminum radiating elements. Mounting hardware: Hot-dip galvanized steel or stainless steel brackets"
       },
 
       "Metal side supports": {
-        label: "Lightning Arrestor with RF Omni Antenna",
-        icon: "⚡",
-        position: "Installed at the absolute top of the tower",
-        positionReason: "Highest point to intercept lightning strikes and provide maximum unobstructed signal coverage",
-        purpose: "Lightning protection: Safely directs lightning energy into tower grounding system. Radio communication: Used for low-power links such as monitoring, control, or backup communication",
-        material: "Lightning rod: Copper or copper-clad steel. Antenna elements: Aluminum or copper. Outer cover (radome): UV-resistant fiberglass or plastic. Internal grounding parts: Copper"
+        label: "Sector Panel Antennas",
+        icon: "📡",
+        position: "Installed near the top of the mobile tower, below the lightning protection system",
+        positionReason: "Mounted on multiple sides to create sectors (typically 3 × 120° coverage). Positioned at high elevation to maximize coverage area and minimize signal obstruction",
+        purpose: "Primary interface between mobile network and user devices. Transmits/receives radio signals for 2G, 3G, 4G LTE, and 5G NR. Multiple panels allow directional coverage, higher user capacity, and reduced interference",
+        material: "Radome: Fiberglass-reinforced plastic (FRP) or RF-transparent polymer, UV-resistant. Internal elements: Copper or aluminum radiating elements. Mounting hardware: Hot-dip galvanized steel or stainless steel brackets"
       },
      
       'blip 2 (sector panel antennas)': {
