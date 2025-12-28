@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -17,6 +18,7 @@ import { normalizeNodeName } from "../helpers/helper";
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
 export default function CesiumMap() {
+  const navigate = useNavigate();
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
   const tilesetRef = useRef(null);
@@ -32,6 +34,8 @@ export default function CesiumMap() {
   const [activeModal, setActiveModal] = useState(null);
   const [isLoading3D, setIsLoading3D] = useState(false);
   const [entitiesReady, setEntitiesReady] = useState(false);
+  const [showViewModelButton, setShowViewModelButton] = useState(false);
+  const [isModelVisible, setIsModelVisible] = useState(false);
 
   /* ---------------- INIT ---------------- */
   useEffect(() => {
@@ -112,14 +116,19 @@ export default function CesiumMap() {
       });
 
       const first = MODELS[0];
-      viewer.camera.setView({
+       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(
           first.lon,
           first.lat,
           CESIUM_CONFIG.INITIAL_ALTITUDE
         ),
-        orientation: { pitch: Cesium.Math.toRadians(-70) },
+        orientation: { 
+          heading: Cesium.Math.toRadians(0),
+          pitch: Cesium.Math.toRadians(-90), // Looking straight down
+          roll: 0.0
+        },
       });
+
 
       setEntitiesReady(true);
 
@@ -166,13 +175,15 @@ export default function CesiumMap() {
           const model = MODEL_LOOKUP[modelId];
           if (model) {
             const raw = picked.detail.node._name;
-            console.log(raw, 'RAW node-name'); 
             const key = normalizeNodeName(raw);
             const part = model.parts?.[key] || model.parts?.[raw];
             if (part) {
-              setActiveModal({
+               setActiveModal({
+                partKey:key,
                 label: part.label,
                 icon: part.icon,
+                partPosition: part.position,
+                positionReason: part.positionReason,
                 purpose: part.purpose,
                 material: part.material,
               });
@@ -353,11 +364,13 @@ const flyToModel = (modelId) => {
           
           setIsLoading3D(false);
           isFlyingRef.current = false;
+          setShowViewModelButton(true); // Show the view model button
           console.log(`✅ Arrived at ${model.name}`);
         }, 3000);
       },
     });
     
+    setPanelOpen(false); 
     console.log(`📏 ${model.name} - Distance: ${Math.round(distance)}m, Target: ${Math.round(targetHeight)}m`);
   };
 
@@ -376,6 +389,45 @@ const flyToModel = (modelId) => {
       <div ref={containerRef} style={{ position: "fixed", inset: 0 }} />
 
       <PartModal modal={activeModal} onClose={() => setActiveModal(null)} />
+
+      {/* Floating View 3D Model Button */}
+      {showViewModelButton && activeModelRef.current && (
+        <a
+          href={`/model-viewer/${activeModelRef.current.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            position: 'fixed',
+            bottom: 20,
+            right: 20,
+            padding: '14px 24px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: '12px',
+            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+            zIndex: 1000,
+            fontSize: '14px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+          }}
+        >
+          🔍 View 3D Model
+        </a>
+      )}
     </>
   );
 }
