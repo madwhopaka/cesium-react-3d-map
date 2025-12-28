@@ -1,351 +1,149 @@
 import { useEffect, useRef } from "react";
+import { computeBubblePosition } from "../../helpers/helper";
 
-export default function PartModal({ modal, onClose, clickPosition }) {
-  const modalRef = useRef(null);
+export default function PartBubble({ bubble, anchor, onClose }) {
+  const ref = useRef(null);
+
+  const {
+  left,
+  top,
+  tailHorizontal,
+  tailVertical,
+} = computeBubblePosition({
+  anchorX: anchor?.x,
+  anchorY: anchor?.y,
+});
+
+  console.log(bubble, 'bubble') ; 
 
   useEffect(() => {
-    if (!modal) return;
+    if (!bubble) return;
 
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
         onClose();
       }
     };
 
-    const timeoutId = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 100);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [bubble, onClose]);
 
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [modal, onClose]);
+  if (!bubble || !anchor) return null;
 
-  if (!modal) return null;
-
-  // Calculate position near click (or default to bottom-right)
-  const getPosition = () => {
-    if (clickPosition) {
-      const { x, y } = clickPosition;
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-      
-      // Place bubble near click but ensure it fits on screen
-      const bubbleWidth = 320;
-      const bubbleHeight = 400;
-      
-      let left = x + 20;
-      let top = y - 100;
-      
-      // Adjust if too far right
-      if (left + bubbleWidth > windowWidth - 20) {
-        left = x - bubbleWidth - 20;
-      }
-      
-      // Adjust if too far down
-      if (top + bubbleHeight > windowHeight - 20) {
-        top = windowHeight - bubbleHeight - 20;
-      }
-      
-      // Adjust if too far up
-      if (top < 20) {
-        top = 20;
-      }
-      
-      return { left: `${left}px`, top: `${top}px` };
-    }
-    
-    // Default position (bottom-right)
-    return { right: "20px", bottom: "20px" };
-  };
-
-  const position = getPosition();
-
+  
   return (
     <>
       <div
-        ref={modalRef}
+        ref={ref}
         style={{
-          position: "fixed",
-          ...position,
-          width: "320px",
-          maxHeight: "380px",
-          backgroundColor: "rgba(30, 30, 30, 0.96)",
+        
+        position: "fixed",
+        left,
+        top,
+        width: 300,
+        maxHeight: 320,
+
+          background: "rgba(17, 24, 39, 0.96)",
           backdropFilter: "blur(10px)",
-          border: "1px solid rgba(255, 255, 255, 0.12)",
-          borderRadius: "18px",
-          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)",
+
+          borderRadius: "22px",
+          padding: "20  px 16px",
+
+          color: "#e5e7eb",
+          fontSize: 13,
+          lineHeight: 1.6,
+
+          boxShadow: "0 12px 36px rgba(0,0,0,0.45)",
           zIndex: 1000,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          animation: "bubblePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+
+          animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
-        {/* Chat bubble pointer/tail */}
+        {/* Tail */}
         <div
           style={{
             position: "absolute",
-            left: clickPosition && clickPosition.x < window.innerWidth / 2 ? "-8px" : "auto",
-            right: !clickPosition || clickPosition.x >= window.innerWidth / 2 ? "-8px" : "auto",
-            top: "40px",
-            width: "0",
-            height: "0",
-            borderTop: "8px solid transparent",
-            borderBottom: "8px solid transparent",
-            borderRight: clickPosition && clickPosition.x < window.innerWidth / 2 ? "8px solid rgba(30, 30, 30, 0.96)" : "none",
-            borderLeft: !clickPosition || clickPosition.x >= window.innerWidth / 2 ? "8px solid rgba(30, 30, 30, 0.96)" : "none",
+            top: tailVertical === "top" ? 22 : "auto",
+            bottom: tailVertical === "bottom" ? 22 : "auto",
+            [tailHorizontal === "left" ? "left" : "right"]: -6,
+            width: 0,
+            height: 0,
+            transform:'rotate(-90%)', 
+            borderTop: "6px solid transparent",
+            borderBottom: "6px solid transparent",
+            // borderLeft:
+            //   tail === "left"
+            //     ? "6px solid rgba(17,24,39,0.96)"
+            //     : "none",
+            // borderRight:
+            //   tail === "right"
+            //     ? "6px solid rgba(17,24,39,0.96)"
+            //     : "none",
           }}
         />
 
-        {/* Header */}
-        <div
-          style={{
-            padding: "12px 16px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: "18px", flexShrink: 0 }}>{modal.icon}</span>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: "14px",
-                fontWeight: "600",
-                color: "#ffffff",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {modal.label}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "none",
-              borderRadius: "50%",
-              width: "24px",
-              height: "24px",
-              cursor: "pointer",
-              color: "#9ca3af",
-              fontSize: "16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s",
-              flexShrink: 0,
-              marginLeft: "8px",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
-              e.currentTarget.style.color = "#ffffff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-              e.currentTarget.style.color = "#9ca3af";
-            }}
-          >
-            ×
-          </button>
+        {/* Title line (speech-style) */}
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ fontSize: 16 }}>{bubble.icon}</span>{" "}
+          <strong>{bubble.label}</strong>
         </div>
 
-        {/* Content */}
-        <div
-          style={{
-            padding: "14px 16px",
-            overflowY: "auto",
-            flex: 1,
-          }}
-        >
-          {modal.partPosition && (
-            <div style={{ marginBottom: "14px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  marginBottom: "6px",
-                }}
-              >
-                <span style={{ fontSize: "13px" }}>📍</span>
-                <h4
-                  style={{
-                    margin: 0,
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    color: "#60a5fa",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  Position
-                </h4>
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "12px",
-                  lineHeight: "1.5",
-                  color: "#d1d5db",
-                }}
-              >
-                {modal.partPosition}
-              </p>
-            </div>
-          )}
+        {/* Position */}
+        {bubble.position && (
+          <Paragraph>
+            <Muted>Position:</Muted> {bubble.position}
+          </Paragraph>
+        )}
 
-          {modal.positionReason && (
-            <div style={{ marginBottom: "14px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  marginBottom: "6px",
-                }}
-              >
-                <span style={{ fontSize: "13px" }}>💡</span>
-                <h4
-                  style={{
-                    margin: 0,
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    color: "#34d399",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  Why Here?
-                </h4>
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "12px",
-                  lineHeight: "1.5",
-                  color: "#d1d5db",
-                }}
-              >
-                {modal.positionReason}
-              </p>
-            </div>
-          )}
+        {/* Reason */}
+        {bubble.positionReason && (
+          <Paragraph>
+            <Muted>Why here:</Muted> {bubble.positionReason}
+          </Paragraph>
+        )}
 
-          {modal.purpose && (
-            <div style={{ marginBottom: "14px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  marginBottom: "6px",
-                }}
-              >
-                <span style={{ fontSize: "13px" }}>🎯</span>
-                <h4
-                  style={{
-                    margin: 0,
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    color: "#fb923c",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  Purpose
-                </h4>
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "12px",
-                  lineHeight: "1.5",
-                  color: "#d1d5db",
-                }}
-              >
-                {modal.purpose}
-              </p>
-            </div>
-          )}
+        {/* Purpose */}
+        {bubble.purpose && (
+          <Paragraph>
+            <Muted>Purpose:</Muted> {bubble.purpose}
+          </Paragraph>
+        )}
 
-          {modal.material && (
-            <div style={{ marginBottom: "0" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  marginBottom: "6px",
-                }}
-              >
-                <span style={{ fontSize: "13px" }}>🔩</span>
-                <h4
-                  style={{
-                    margin: 0,
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    color: "#a78bfa",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  Materials
-                </h4>
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "12px",
-                  lineHeight: "1.5",
-                  color: "#d1d5db",
-                }}
-              >
-                {modal.material}
-              </p>
-            </div>
-          )}
-        </div>
+        {/* Material */}
+        {bubble.material && (
+          <Paragraph>
+            <Muted>Materials:</Muted> {bubble.material}
+          </Paragraph>
+        )}
       </div>
 
-      <style>
-        {`
-          @keyframes bubblePop {
-            from {
-              transform: scale(0.9);
-              opacity: 0;
-            }
-            to {
-              transform: scale(1);
-              opacity: 1;
-            }
+      <style>{`
+        @keyframes bubbleIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px) scale(0.98);
           }
-
-          div::-webkit-scrollbar {
-            width: 5px;
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
           }
-
-          div::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.04);
-            border-radius: 3px;
-          }
-
-          div::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 3px;
-          }
-
-          div::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.25);
-          }
-        `}
-      </style>
+        }
+      `}</style>
     </>
+  );
+}
+
+/* ---------- helpers ---------- */
+
+function Paragraph({ children }) {
+  return <div style={{ marginBottom: 8 }}>{children}</div>;
+}
+
+function Muted({ children }) {
+  return (
+    <span style={{ color: "#9ca3af", fontWeight: 500 }}>
+      {children}
+    </span>
   );
 }

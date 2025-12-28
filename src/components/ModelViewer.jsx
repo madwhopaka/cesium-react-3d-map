@@ -5,6 +5,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import { MODELS, MODEL_LOOKUP } from "../constants/models";
 import { normalizeNodeName } from "../helpers/helper";
 import PartModal from "./Cesium/PartsModal";
+import PartBubble from "./Cesium/PartsModal";
 
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
@@ -15,9 +16,10 @@ export default function ModelViewer() {
 
   const model = MODEL_LOOKUP[modelId];
 
-  // ========== ADDED: State for modal ==========
   const [activeModal, setActiveModal] = useState(null);
-  // ========== END ADDED ==========
+  const [partBubble, setPartBubble] = useState(null);
+  const [bubbleAnchor, setBubbleAnchor] = useState(null);
+
 
   useEffect(() => {
     if (!model) return;
@@ -69,6 +71,10 @@ export default function ModelViewer() {
         model.towerHeight * 2
       ));
 
+      viewer.camera.changed.addEventListener(() => {
+        setPartBubble(null);
+      });
+
       // ========== ADDED: Click handler for parts ==========
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handler.setInputAction((movement) => {
@@ -84,13 +90,27 @@ export default function ModelViewer() {
             const part = pickedModel.parts?.[key] || pickedModel.parts?.[raw];
             
             if (part) {
-              setActiveModal({
-                label: part.label,
+              // setActiveModal({
+              //   label: part.label,
+              //   icon: part.icon,
+              //   partPosition: part.position,
+              //   positionReason: part.positionReason,
+              //   purpose: part.purpose,
+              //   material: part.material,
+              // });
+
+              setPartBubble({
                 icon: part.icon,
-                partPosition: part.position,
-                positionReason: part.positionReason,
-                purpose: part.purpose,
-                material: part.material,
+                label: part.label,
+                position:part.partPosition, 
+                positionReason: part.positionReason, 
+                purpose: part.purpose, 
+                material: part.material
+              });
+            
+              setBubbleAnchor({
+                x: movement.position.x,
+                y: movement.position.y,
               });
               
               console.log(`🖱️ Clicked: ${part.label} (${key})`);
@@ -182,9 +202,11 @@ export default function ModelViewer() {
 
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-      {/* ========== ADDED: Parts modal ========== */}
-      <PartModal modal={activeModal} onClose={() => setActiveModal(null)} />
-      {/* ========== END ADDED ========== */}
+      <PartBubble
+        bubble={partBubble}
+        anchor={bubbleAnchor}
+        onClose={() => setPartBubble(null)}
+      />
     </div>
   );
 }
