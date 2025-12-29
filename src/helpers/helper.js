@@ -55,3 +55,60 @@ export const getDistanceToModel = (model, cameraPos, Cesium) => {
   );
   return Cesium.Cartesian3.distance(cameraPos, modelPos);
 };
+
+/**
+ * Computes safe on-screen position for a speech bubble
+ * anchored to a click position.
+ */
+export function computeBubblePosition({
+  anchorX,
+  anchorY,
+  bubbleWidth = 300,
+  bubbleHeight = 320,
+  margin = 12,
+  tailOffset = 18,
+}) {
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+
+  let left = anchorX + tailOffset;
+  let top = anchorY - 24;
+
+  let tailHorizontal = "left";   // tail points left → bubble on right
+  let tailVertical = "top";
+
+  /* ---------- Horizontal logic ---------- */
+
+  // Overflow right → flip to left
+  if (left + bubbleWidth > viewportW - margin) {
+    left = anchorX - bubbleWidth - tailOffset;
+    tailHorizontal = "right";
+  }
+
+  // Clamp horizontally
+  left = Math.max(
+    margin,
+    Math.min(left, viewportW - bubbleWidth - margin)
+  );
+
+  /* ---------- Vertical logic ---------- */
+
+  // Overflow bottom → move above
+  if (top + bubbleHeight > viewportH - margin) {
+    top = anchorY - bubbleHeight - tailOffset;
+    tailVertical = "bottom";
+  }
+
+  // Clamp vertically
+  top = Math.max(
+    margin,
+    Math.min(top, viewportH - bubbleHeight - margin)
+  );
+
+  return {
+    left,
+    top,
+    tailHorizontal, // "left" | "right"
+    tailVertical,   // "top" | "bottom"
+  };
+}

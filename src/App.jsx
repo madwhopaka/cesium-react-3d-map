@@ -1,16 +1,21 @@
-import { useState } from 'react';
-import logo from './logo.svg';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
-import Map3D from './components/Map3d';
-import CesiumMap from './components/CesiumBox' ; 
-const App = () => {
+import CesiumMap from './components/CesiumBox';
+import ModelViewer from './components/ModelViewer';
 
+const App = () => {
   return (
-    <div className="App">
-      {/* <Map3D /> */}
-      {/* <div className='w-full h-screen text-red-400'>Helloooo</div> */}
-      <CesiumMap />
-    </div>
+    <BrowserRouter>
+      <div className="App">
+        <Routes>
+          {/* Main map view */}
+          <Route path="/" element={<CesiumMap />} />
+          
+          {/* Model viewer with dynamic ID */}
+          <Route path="/model-viewer/:modelId" element={<ModelViewer />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 };
 

@@ -1,296 +1,149 @@
 import { useEffect, useRef } from "react";
+import { computeBubblePosition } from "../../helpers/helper";
 
-export default function PartModal({ modal, onClose }) {
-  const modalRef = useRef(null);
+export default function PartBubble({ bubble, anchor, onClose }) {
+  const ref = useRef(null);
 
-  // Close on click outside
+  const {
+  left,
+  top,
+  tailHorizontal,
+  tailVertical,
+} = computeBubblePosition({
+  anchorX: anchor?.x,
+  anchorY: anchor?.y,
+});
+
+  console.log(bubble, 'bubble') ; 
+
   useEffect(() => {
-    if (!modal) return;
+    if (!bubble) return;
 
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
         onClose();
       }
     };
 
-    // Add listener after a small delay to avoid immediate closure
-    const timeoutId = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 100);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [bubble, onClose]);
 
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [modal, onClose]);
+  if (!bubble || !anchor) return null;
 
-  if (!modal) return null;
-
+  
   return (
-    <div
-      ref={modalRef}
-      style={{
+    <>
+      <div
+        ref={ref}
+        style={{
+        
         position: "fixed",
-        right: "20px",
-        bottom: "20px",
-        width: "400px",
-        maxHeight: "500px",
-        backgroundColor: "rgba(30, 30, 30, 0.95)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        borderRadius: "12px",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
-        zIndex: 1000,
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        animation: "slideInUp 0.3s ease-out",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          padding: "16px 20px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "24px" }}>{modal.icon}</span>
-          <h3
-            style={{
-              margin: 0,
-              fontSize: "18px",
-              fontWeight: "600",
-              color: "#ffffff",
-            }}
-          >
-            {modal.label}
-          </h3>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            background: "rgba(255, 255, 255, 0.1)",
-            border: "none",
-            borderRadius: "6px",
-            padding: "6px 10px",
-            cursor: "pointer",
-            color: "#ffffff",
-            fontSize: "18px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "background 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-          }}
-        >
-          ×
-        </button>
-      </div>
+        left,
+        top,
+        width: 300,
+        maxHeight: 320,
 
-      {/* Content */}
-      <div
-        style={{
-          padding: "20px",
-          overflowY: "auto",
-          flex: 1,
+          background: "rgba(17, 24, 39, 0.96)",
+          backdropFilter: "blur(10px)",
+
+          borderRadius: "22px",
+          padding: "20  px 16px",
+
+          color: "#e5e7eb",
+          fontSize: 13,
+          lineHeight: 1.6,
+
+          boxShadow: "0 12px 36px rgba(0,0,0,0.45)",
+          zIndex: 1000,
+
+          animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
+        {/* Tail */}
+        <div
+          style={{
+            position: "absolute",
+            top: tailVertical === "top" ? 22 : "auto",
+            bottom: tailVertical === "bottom" ? 22 : "auto",
+            [tailHorizontal === "left" ? "left" : "right"]: -6,
+            width: 0,
+            height: 0,
+            transform:'rotate(-90%)', 
+            borderTop: "6px solid transparent",
+            borderBottom: "6px solid transparent",
+            // borderLeft:
+            //   tail === "left"
+            //     ? "6px solid rgba(17,24,39,0.96)"
+            //     : "none",
+            // borderRight:
+            //   tail === "right"
+            //     ? "6px solid rgba(17,24,39,0.96)"
+            //     : "none",
+          }}
+        />
+
+        {/* Title line (speech-style) */}
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ fontSize: 16 }}>{bubble.icon}</span>{" "}
+          <strong>{bubble.label}</strong>
+        </div>
+
         {/* Position */}
-        {modal.partPosition && (
-          <div style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <span style={{ fontSize: "16px" }}>📍</span>
-              <h4
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#60a5fa",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                Position
-              </h4>
-            </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "14px",
-                lineHeight: "1.6",
-                color: "#d1d5db",
-              }}
-            >
-              {modal.partPosition}
-            </p>
-          </div>
+        {bubble.position && (
+          <Paragraph>
+            <Muted>Position:</Muted> {bubble.position}
+          </Paragraph>
         )}
 
-        {/* Why Here */}
-        {modal.positionReason && (
-          <div style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <span style={{ fontSize: "16px" }}>💡</span>
-              <h4
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#34d399",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                Why Here?
-              </h4>
-            </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "14px",
-                lineHeight: "1.6",
-                color: "#d1d5db",
-              }}
-            >
-              {modal.positionReason}
-            </p>
-          </div>
+        {/* Reason */}
+        {bubble.positionReason && (
+          <Paragraph>
+            <Muted>Why here:</Muted> {bubble.positionReason}
+          </Paragraph>
         )}
 
         {/* Purpose */}
-        {modal.purpose && (
-          <div style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <span style={{ fontSize: "16px" }}>🎯</span>
-              <h4
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#fb923c",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                Purpose
-              </h4>
-            </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "14px",
-                lineHeight: "1.6",
-                color: "#d1d5db",
-              }}
-            >
-              {modal.purpose}
-            </p>
-          </div>
+        {bubble.purpose && (
+          <Paragraph>
+            <Muted>Purpose:</Muted> {bubble.purpose}
+          </Paragraph>
         )}
 
-        {/* Materials */}
-        {modal.material && (
-          <div style={{ marginBottom: "0" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <span style={{ fontSize: "16px" }}>🔩</span>
-              <h4
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#a78bfa",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                Materials
-              </h4>
-            </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "14px",
-                lineHeight: "1.6",
-                color: "#d1d5db",
-              }}
-            >
-              {modal.material}
-            </p>
-          </div>
+        {/* Material */}
+        {bubble.material && (
+          <Paragraph>
+            <Muted>Materials:</Muted> {bubble.material}
+          </Paragraph>
         )}
       </div>
 
-      {/* Animation */}
-      <style>
-        {`
-          @keyframes slideInUp {
-            from {
-              transform: translateY(20px);
-              opacity: 0;
-            }
-            to {
-              transform: translateY(0);
-              opacity: 1;
-            }
+      <style>{`
+        @keyframes bubbleIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px) scale(0.98);
           }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
+    </>
+  );
+}
 
-          /* Custom scrollbar */
-          div::-webkit-scrollbar {
-            width: 6px;
-          }
+/* ---------- helpers ---------- */
 
-          div::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
-          }
+function Paragraph({ children }) {
+  return <div style={{ marginBottom: 8 }}>{children}</div>;
+}
 
-          div::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-          }
-
-          div::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
-          }
-        `}
-      </style>
-    </div>
+function Muted({ children }) {
+  return (
+    <span style={{ color: "#9ca3af", fontWeight: 500 }}>
+      {children}
+    </span>
   );
 }
