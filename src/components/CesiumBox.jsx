@@ -147,7 +147,7 @@ export default function CesiumMap() {
           viewer.scene.requestRender();
         }, 100);
       };
-      cloudImg.src = '/images/Cloud map.webp';
+      cloudImg.src = '/images/cloud-map.webp';
 
       // --- Models, Blips & Labels (separated) ---
       MODELS.forEach((model) => {
@@ -410,7 +410,7 @@ useEffect(() => {
     frameCounterRef.current += 1;
 
     // After ~20 frames (~300ms @ 60fps)
-    if (frameCounterRef.current > 20) {
+    if (frameCounterRef.current > 5) {
       // Check if minimum loading time has passed
       const elapsedTime = Date.now() - initStartTimeRef.current;
       if (elapsedTime >= MINIMUM_LOADING_TIME) {
