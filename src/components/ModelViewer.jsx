@@ -28,6 +28,16 @@ export default function ModelViewer() {
   const [partBubble, setPartBubble] = useState(null);
   const [bubbleAnchor, setBubbleAnchor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInIframe, setIsInIframe] = useState(false);
+
+  // Detect if component is in iframe
+  useEffect(() => {
+    try {
+      setIsInIframe(window.self !== window.top);
+    } catch (e) {
+      setIsInIframe(true);
+    }
+  }, []);
 
   // Safety timeout: ensure loading screen disappears after 5 seconds max
   useEffect(() => {
@@ -399,27 +409,29 @@ export default function ModelViewer() {
         </div>
       )}
 
-      <Link
-        to="/"
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          zIndex: 1000,
-          padding: '12px 24px',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          color: '#111827',
-          textDecoration: 'none',
-          borderRadius: '8px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          fontSize: '14px',
-          fontWeight: '500',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(0,0,0,0.1)',
-        }}
-      >
-        ← Back to Map
-      </Link>
+      {!isInIframe && (
+        <Link
+          to="/"
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            zIndex: 1000,
+            padding: '12px 24px',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            color: '#111827',
+            textDecoration: 'none',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            fontSize: '14px',
+            fontWeight: '500',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(0,0,0,0.1)',
+          }}
+        >
+          ← Back to Map
+        </Link>
+      )}
 
       <div
         style={{
@@ -427,17 +439,17 @@ export default function ModelViewer() {
           top: '20px',
           right: '20px',
           zIndex: 1000,
-          padding: '16px 24px',
+          padding: '8px 12px',
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           color: '#111827',
-          borderRadius: '8px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          borderRadius: '6px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(0,0,0,0.1)',
         }}
       >
-        <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '600' }}>{model.name}</h2>
-        <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+        <h2 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '600' }}>{model.name}</h2>
+        <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>
           Height: {model.towerHeight}m
         </p>
       </div>

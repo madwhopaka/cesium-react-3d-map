@@ -33,7 +33,6 @@ export default function CesiumMap() {
   const frameCounterRef = useRef(0);
   const initStartTimeRef = useRef(null); // Track initialization start time
   const skyboxLoadedRef = useRef(false); // Track skybox loading
-  const cloudLayerRef = useRef(null); // Track cloud layer entity
 
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
@@ -43,6 +42,7 @@ export default function CesiumMap() {
   const [entitiesReady, setEntitiesReady] = useState(false);
   const [showViewModelButton, setShowViewModelButton] = useState(false);
   const [isModelVisible, setIsModelVisible] = useState(false);
+  const [showMiniViewer, setShowMiniViewer] = useState(false); // Mini viewer modal state
 
   /* ---------------- INIT ---------------- */
   useEffect(() => {
@@ -121,35 +121,9 @@ export default function CesiumMap() {
       viewer.scene.skyBox = new Cesium.SkyBox({ sources: skyboxSources });
       viewer.scene.skyBox.show = true;
       viewer.scene.skyAtmosphere.show = false;
-      
-      // --- Add Global Cloud Layer (Simple Rectangle Approach) ---
-      const cloudLayer = viewer.entities.add({
-        rectangle: {
-          coordinates: Cesium.Rectangle.fromDegrees(-180, -90, 180, 90),
-          height: 12000, // Cloud layer at 12km altitude
-          material: new Cesium.ImageMaterialProperty({
-            image: '/images/cloud-map.webp',
-            repeat: new Cesium.Cartesian2(1, 1),
-            transparent: true,
-            color: Cesium.Color.WHITE.withAlpha(0.35), // 35% opacity
-          }),
-        },
-      });
-      
-      cloudLayerRef.current = cloudLayer;
-      
-      // Track cloud layer image loading
-      const cloudImg = new Image();
-      cloudImg.onload = () => {
-        console.log('✅ Cloud layer loaded');
-        // Give a moment for rendering
-        setTimeout(() => {
-          viewer.scene.requestRender();
-        }, 100);
-      };
-      cloudImg.src = '/images/cloud-map.webp';
 
       // --- Models, Blips & Labels (separated) ---
+      console.log('🏗️ Creating models, blips, and labels for', MODELS.length, 'towers');
       MODELS.forEach((model) => {
         const pos = Cesium.Cartesian3.fromDegrees(
           model.lon,
@@ -157,11 +131,11 @@ export default function CesiumMap() {
           model.altitude
         );
 
-        // Offset position for blip/label (slightly to the side)
-        const offsetPos = Cesium.Cartesian3.fromDegrees(
-          model.lon, // ~2 meters east
-          model.lat, // ~2 meters north
-          model.altitude + (model.towerHeight) // 30% up the tower
+        // Position at the tip of the tower
+        const tipPos = Cesium.Cartesian3.fromDegrees(
+          model.lon,
+          model.lat,
+          model.altitude + model.towerHeight // At tower tip
         );
 
         const entity = viewer.entities.add({
@@ -179,9 +153,9 @@ export default function CesiumMap() {
         entity.modelId = model.id;
         entityMapRef.current[model.id] = entity;
 
-        // Blip (marker icon only) - now always visible
+        // Blip (marker icon) - at tower tip
         blipMapRef.current[model.id] = viewer.entities.add({
-          position: offsetPos,
+          position: tipPos,
           billboard: {
             image: BLIP_CONFIG.imageUrl,
             scale: BLIP_CONFIG.scale,
@@ -189,9 +163,9 @@ export default function CesiumMap() {
           },
         });
 
-        // Label (separate entity - always visible)
+        // Label - at tower tip with pixel offset for visibility
         labelMapRef.current[model.id] = viewer.entities.add({
-          position: offsetPos,
+          position: tipPos,
           label: {
             text: model.name,
             font: BLIP_CONFIG.labelFont,
@@ -201,6 +175,10 @@ export default function CesiumMap() {
           },
         });
       });
+      
+      console.log('✅ Models created:', Object.keys(entityMapRef.current).length);
+      console.log('✅ Blips created:', Object.keys(blipMapRef.current).length);
+      console.log('✅ Labels created:', Object.keys(labelMapRef.current).length);
 
       const first = MODELS[0];
        viewer.camera.setView({
@@ -353,7 +331,7 @@ export default function CesiumMap() {
 
     const scene = viewer.scene;
     let stableFrames = 0;
-    const MINIMUM_LOADING_TIME = 1000; // 3 seconds minimum
+    const MINIMUM_LOADING_TIME = 2000; // 2 seconds minimum
 
     const onPostRender = () => {
       const tileset = tilesetRef.current;
@@ -397,7 +375,7 @@ useEffect(() => {
   if (!viewer) return;
 
   const scene = viewer.scene;
-  const MINIMUM_LOADING_TIME = 3000; // 3 seconds minimum
+  const MINIMUM_LOADING_TIME = 2000; // 2 seconds minimum
 
   const onPostRender = () => {
     // Still flying → keep loader
@@ -410,7 +388,7 @@ useEffect(() => {
     frameCounterRef.current += 1;
 
     // After ~20 frames (~300ms @ 60fps)
-    if (frameCounterRef.current > 5) {
+    if (frameCounterRef.current > 20) {
       // Check if minimum loading time has passed
       const elapsedTime = Date.now() - initStartTimeRef.current;
       if (elapsedTime >= MINIMUM_LOADING_TIME) {
@@ -515,6 +493,29 @@ const flyToModel = (modelId) => {
     console.log(`📏 ${model.name} - Distance: ${Math.round(distance)}m, Target: ${Math.round(targetHeight)}m`);
   };
 
+  /* ---------------- ESC KEY TO CLOSE MINI VIEWER ---------------- */
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === 'Escape' && showMiniViewer) {
+        setShowMiniViewer(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showMiniViewer]);
+
+  /* ---------------- LISTEN FOR IFRAME CLOSE MESSAGE ---------------- */
+  useEffect(() => {
+    const handleMessage = (event) => {
+      // Close modal when iframe sends 'closeModal' message
+      if (event.data === 'closeModal') {
+        setShowMiniViewer(false);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
 
   return (
     <>
@@ -537,10 +538,8 @@ const flyToModel = (modelId) => {
 
       {/* Floating View 3D Model Button */}
       {showViewModelButton && activeModelRef.current && (
-        <a
-          href={`/model-viewer/${activeModelRef.current.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => setShowMiniViewer(true)}
           style={{
             position: 'fixed',
             bottom: 20,
@@ -560,6 +559,7 @@ const flyToModel = (modelId) => {
             transition: 'all 0.3s ease',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
+            cursor: 'pointer',
           }}
           onMouseEnter={(e) => {
             e.target.style.transform = 'translateY(-2px)';
@@ -571,7 +571,87 @@ const flyToModel = (modelId) => {
           }}
         >
           🔍 View 3D Model
-        </a>
+        </button>
+      )}
+
+      {/* Mini Viewer Modal */}
+      {showMiniViewer && activeModelRef.current && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(10px)',
+          }}
+          onClick={() => setShowMiniViewer(false)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '60vw',
+              height: '90vh',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowMiniViewer(false)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.95)',
+                border: 'none',
+                cursor: 'pointer',
+                zIndex: 10001,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: '#333',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(255, 60, 60, 0.95)';
+                e.target.style.color = 'white';
+                e.target.style.transform = 'rotate(90deg) scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.95)';
+                e.target.style.color = '#333';
+                e.target.style.transform = 'rotate(0deg) scale(1)';
+              }}
+            >
+              ✕
+            </button>
+
+            {/* GLB Viewer iframe */}
+            <iframe
+              src={`/model-viewer/${activeModelRef.current.id}`}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                borderRadius: '20px',
+              }}
+              title="3D Model Viewer"
+            />
+          </div>
+        </div>
       )}
     </>
   );

@@ -217,6 +217,7 @@ export default function ModelsPanel({ models, isOpen, onToggle, onSelectModel })
               {/* View 3D Model Link */}
               <Link
                 to={`/model-viewer/${model.id}`}
+                target='_blank'
                 style={{
                   display: "flex",
                   alignItems: "center",
