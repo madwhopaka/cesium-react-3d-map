@@ -7,11 +7,6 @@ import { MODEL_LOOKUP } from "../constants/models";
 import { normalizeNodeName } from "../helpers/helper";
 import PartBubble from "./Cesium/PartsModal";
 
-// Note: Make sure you've removed the Cesium imports from the top of this file
-// Remove: import * as Cesium from "cesium";
-// Remove: import "cesium/Build/Cesium/Widgets/widgets.css";
-// Remove: Cesium.Ion.defaultAccessToken line
-
 export default function ModelViewer() {
   const { modelId } = useParams();
   const containerRef = useRef(null);
@@ -22,6 +17,11 @@ export default function ModelViewer() {
   const modelRef = useRef(null);
   const raycasterRef = useRef(new THREE.Raycaster());
   const mouseRef = useRef(new THREE.Vector2());
+  
+  // Track if user is actively interacting to prevent premature bubble clearing
+  const isUserInteractingRef = useRef(false);
+  const bubbleSetTimeRef = useRef(0);
+  const modelLoadedRef = useRef(false);
 
   const model = MODEL_LOOKUP[modelId];
   const [partBubble, setPartBubble] = useState(null);
@@ -42,7 +42,7 @@ export default function ModelViewer() {
       0.1,
       10000
     );
-    camera.position.set(100, 100, 100); // Set initial position
+    camera.position.set(100, 100, 100);
     cameraRef.current = camera;
 
     // Renderer
@@ -54,7 +54,6 @@ export default function ModelViewer() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
-    // Make sure canvas fills container
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
     renderer.domElement.style.left = '0';
@@ -64,7 +63,7 @@ export default function ModelViewer() {
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting - bright setup for white background
+    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
@@ -87,11 +86,33 @@ export default function ModelViewer() {
     controls.maxDistance = 1000;
     controlsRef.current = controls;
 
-    // Close bubble on camera movement
-    controls.addEventListener('change', () => {
-      setPartBubble(null);
-      setBubbleAnchor(null);
-    });
+    // Track when user starts interacting
+    const onControlStart = () => {
+      isUserInteractingRef.current = true;
+    };
+
+    const onControlEnd = () => {
+      isUserInteractingRef.current = false;
+    };
+
+    // Only clear bubble if user is actively rotating/moving camera
+    // AND enough time has passed since bubble was set (prevents immediate clearing)
+    const onControlChange = () => {
+      const timeSinceBubbleSet = Date.now() - bubbleSetTimeRef.current;
+      
+      // Only clear if:
+      // 1. User is actively dragging/rotating
+      // 2. At least 200ms has passed since bubble was set (prevents race condition)
+      // 3. Model has finished loading (prevents clearing during initial setup)
+      if (isUserInteractingRef.current && timeSinceBubbleSet > 200 && modelLoadedRef.current) {
+        setPartBubble(null);
+        setBubbleAnchor(null);
+      }
+    };
+
+    controls.addEventListener('start', onControlStart);
+    controls.addEventListener('end', onControlEnd);
+    controls.addEventListener('change', onControlChange);
 
     // Load model
     const loader = new GLTFLoader();
@@ -101,11 +122,12 @@ export default function ModelViewer() {
         const loadedModel = gltf.scene;
         loadedModel.scale.set(model.scale, model.scale, model.scale);
         
-        // Enable shadows
+        // Enable shadows and log all mesh names for debugging
         loadedModel.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            console.log('Mesh found:', child.name);
           }
         });
 
@@ -130,6 +152,12 @@ export default function ModelViewer() {
         camera.lookAt(0, 0, 0);
         controls.target.set(0, 0, 0);
         controls.update();
+        
+        // Mark model as loaded after a brief delay to ensure setup is complete
+        setTimeout(() => {
+          modelLoadedRef.current = true;
+          console.log('✅ Model fully loaded and ready for interaction');
+        }, 500);
       },
       undefined,
       (error) => {
@@ -139,36 +167,66 @@ export default function ModelViewer() {
 
     // Click handler for parts
     const handleClick = (event) => {
+      // Don't process clicks if model isn't loaded yet
+      if (!modelLoadedRef.current || !modelRef.current) {
+        console.log('⏳ Model not ready yet');
+        return;
+      }
+
       const rect = renderer.domElement.getBoundingClientRect();
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycasterRef.current.setFromCamera(mouseRef.current, camera);
       
-      console.log('picked');
-      
-      // Close any existing bubble first
-      setPartBubble(null);
-      setBubbleAnchor(null);
+      console.log('🖱️ Click detected');
 
-      if (!modelRef.current) return;
-
+      // Intersect with all meshes recursively
       const intersects = raycasterRef.current.intersectObjects(
         modelRef.current.children,
-        true
+        true // recursive
       );
 
       if (intersects.length > 0) {
         const intersected = intersects[0].object;
-        const nodeName = intersected.name || intersected.parent?.name;
         
-        console.log('Clicked object:', nodeName);
+        // Try multiple ways to get the node name
+        let nodeName = intersected.name;
+        
+        // If no name, check parent hierarchy
+        if (!nodeName && intersected.parent) {
+          nodeName = intersected.parent.name;
+        }
+        
+        // If still no name, traverse up the hierarchy
+        if (!nodeName) {
+          let current = intersected;
+          while (current.parent && !nodeName) {
+            current = current.parent;
+            if (current.name && current !== modelRef.current) {
+              nodeName = current.name;
+              break;
+            }
+          }
+        }
+        
+        console.log('Picked object:', nodeName, 'Type:', intersected.type);
 
         if (nodeName) {
           const key = normalizeNodeName(nodeName);
-          const part = model.parts?.[key] || model.parts?.[nodeName] || model.parts?.[nodeName.replace(/_/g, " ")];
+          
+          // Try multiple lookup strategies
+          const part = model.parts?.[key] || 
+                       model.parts?.[nodeName] || 
+                       model.parts?.[nodeName.replace(/_/g, " ")] ||
+                       model.parts?.[nodeName.toLowerCase()];
 
           if (part) {
+            console.log(`✅ Part found: ${part.label} (key: ${key})`);
+            
+            // Record when bubble was set to prevent immediate clearing
+            bubbleSetTimeRef.current = Date.now();
+            
             setPartBubble({
               icon: part.icon,
               label: part.label,
@@ -183,17 +241,25 @@ export default function ModelViewer() {
               y: event.clientY,
             });
 
-            console.log(`🖱️ Clicked: ${part.label} (${key})`);
             return;
+          } else {
+            console.log(`⚠️ No part definition found for: "${nodeName}" (normalized: "${key}")`);
+            console.log('Available parts:', Object.keys(model.parts || {}));
           }
+        } else {
+          console.log('⚠️ No name found for intersected object');
         }
+      } else {
+        console.log("❌ No objects intersected");
       }
-
-      // If we get here, nothing was picked - bubble is already closed
-      console.log("❌ No part picked");
+      
+      // Only clear bubble if we didn't find a valid part
+      setPartBubble(null);
+      setBubbleAnchor(null);
     };
 
-    renderer.domElement.addEventListener('click', handleClick);
+    // Use pointerdown to ensure clean click detection
+    renderer.domElement.addEventListener('pointerdown', handleClick);
 
     // Animation loop
     const animate = () => {
@@ -218,7 +284,10 @@ export default function ModelViewer() {
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-      renderer.domElement.removeEventListener('click', handleClick);
+      renderer.domElement.removeEventListener('pointerdown', handleClick);
+      controls.removeEventListener('start', onControlStart);
+      controls.removeEventListener('end', onControlEnd);
+      controls.removeEventListener('change', onControlChange);
       controls.dispose();
       renderer.dispose();
       if (containerRef.current && renderer.domElement) {
@@ -313,10 +382,6 @@ export default function ModelViewer() {
       <PartBubble
         bubble={partBubble}
         anchor={bubbleAnchor}
-        onClose={() => {
-          setPartBubble(null);
-          setBubbleAnchor(null);
-        }}
       />
     </div>
   );
