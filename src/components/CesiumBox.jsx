@@ -32,6 +32,8 @@ export default function CesiumMap() {
   const isFlyingRef = useRef(false);
   const frameCounterRef = useRef(0);
   const initStartTimeRef = useRef(null); // Track initialization start time
+  const skyboxLoadedRef = useRef(false); // Track skybox loading
+  const cloudLayerRef = useRef(null); // Track cloud layer entity
 
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
@@ -91,46 +93,61 @@ export default function CesiumMap() {
       tilesetRef.current = tileset;
 
       // --- Custom Skybox ---
-      viewer.scene.skyBox = new Cesium.SkyBox({
-        sources: {
-          positiveX: '/images/Black space.webp',
-          negativeX: '/images/Black space.webp',
-          positiveY: '/images/Black space.webp',
-          negativeY: '/images/Black space.webp',
-          positiveZ: '/images/Black space.webp',
-          negativeZ: '/images/Black space.webp'
-        }
+      const skyboxSources = {
+        positiveX: '/images/Black space.webp',
+        negativeX: '/images/Black space.webp',
+        positiveY: '/images/Black space.webp',
+        negativeY: '/images/Black space.webp',
+        positiveZ: '/images/Black space.webp',
+        negativeZ: '/images/Black space.webp'
+      };
+      
+      // Track skybox image loading
+      let skyboxImagesLoaded = 0;
+      const totalSkyboxImages = 6;
+      
+      Object.values(skyboxSources).forEach(src => {
+        const img = new Image();
+        img.onload = () => {
+          skyboxImagesLoaded++;
+          if (skyboxImagesLoaded === totalSkyboxImages) {
+            skyboxLoadedRef.current = true;
+            console.log('✅ Skybox loaded');
+          }
+        };
+        img.src = src;
       });
+      
+      viewer.scene.skyBox = new Cesium.SkyBox({ sources: skyboxSources });
       viewer.scene.skyBox.show = true;
       viewer.scene.skyAtmosphere.show = false;
       
-      // --- Add Global Cloud Layer (Google Earth style) ---
-      const earthRadius = 6378137.0; // meters (WGS84)
-      const cloudHeight = 12000.0;   // clouds ~12km above surface
-      const cloudSphere = viewer.scene.primitives.add(
-        new Cesium.Primitive({
-          geometryInstances: new Cesium.GeometryInstance({
-            geometry: new Cesium.EllipsoidGeometry({
-              radii: new Cesium.Cartesian3(
-                earthRadius + cloudHeight,
-                earthRadius + cloudHeight,
-                earthRadius + cloudHeight
-              ),
-              vertexFormat: Cesium.MaterialAppearance.VERTEX_FORMAT,
-            }),
+      // --- Add Global Cloud Layer (Simple Rectangle Approach) ---
+      const cloudLayer = viewer.entities.add({
+        rectangle: {
+          coordinates: Cesium.Rectangle.fromDegrees(-180, -90, 180, 90),
+          height: 12000, // Cloud layer at 12km altitude
+          material: new Cesium.ImageMaterialProperty({
+            image: '/images/Cloud map.webp',
+            repeat: new Cesium.Cartesian2(1, 1),
+            transparent: true,
+            color: Cesium.Color.WHITE.withAlpha(0.35), // 35% opacity
           }),
-          appearance: new Cesium.MaterialAppearance({
-            material: Cesium.Material.fromType("Image", {
-              image: "/images/Cloud map.webp", // MUST be equirectangular
-              transparent: true,
-              color: Cesium.Color.WHITE.withAlpha(0.45),
-            }),
-            faceForward: true,
-            closed: false,
-          }),
-          asynchronous: false,
-        })
-      );
+        },
+      });
+      
+      cloudLayerRef.current = cloudLayer;
+      
+      // Track cloud layer image loading
+      const cloudImg = new Image();
+      cloudImg.onload = () => {
+        console.log('✅ Cloud layer loaded');
+        // Give a moment for rendering
+        setTimeout(() => {
+          viewer.scene.requestRender();
+        }, 100);
+      };
+      cloudImg.src = '/images/Cloud map.webp';
 
       // --- Models, Blips & Labels (separated) ---
       MODELS.forEach((model) => {
@@ -336,7 +353,7 @@ export default function CesiumMap() {
 
     const scene = viewer.scene;
     let stableFrames = 0;
-    const MINIMUM_LOADING_TIME = 4000; // 4 seconds minimum for cloud rendering
+    const MINIMUM_LOADING_TIME = 3000; // 3 seconds minimum
 
     const onPostRender = () => {
       const tileset = tilesetRef.current;
@@ -345,17 +362,22 @@ export default function CesiumMap() {
       const tilesReady =
         tileset.tilesLoaded || tileset._loadQueueLength === 0;
 
-      if (!isFlyingRef.current && tilesReady) {
+      // Check if skybox is loaded
+      const skyboxReady = skyboxLoadedRef.current;
+
+      if (!isFlyingRef.current && tilesReady && skyboxReady) {
         stableFrames++;
         if (stableFrames >= 5) {
           // Check if minimum loading time has passed
           const elapsedTime = Date.now() - initStartTimeRef.current;
           if (elapsedTime >= MINIMUM_LOADING_TIME) {
+            console.log('✅ All resources loaded, hiding loading screen');
             setIsLoading3D(false);
           } else {
             // Wait for remaining time
             const remainingTime = MINIMUM_LOADING_TIME - elapsedTime;
             setTimeout(() => {
+              console.log('✅ Minimum time reached, hiding loading screen');
               setIsLoading3D(false);
             }, remainingTime);
           }
@@ -375,11 +397,14 @@ useEffect(() => {
   if (!viewer) return;
 
   const scene = viewer.scene;
-  const MINIMUM_LOADING_TIME = 4000; // 4 seconds minimum
+  const MINIMUM_LOADING_TIME = 3000; // 3 seconds minimum
 
   const onPostRender = () => {
     // Still flying → keep loader
     if (isFlyingRef.current) return;
+
+    // Check if skybox is loaded
+    if (!skyboxLoadedRef.current) return;
 
     // Camera done → count frames
     frameCounterRef.current += 1;
@@ -389,6 +414,7 @@ useEffect(() => {
       // Check if minimum loading time has passed
       const elapsedTime = Date.now() - initStartTimeRef.current;
       if (elapsedTime >= MINIMUM_LOADING_TIME) {
+        console.log('✅ Frame counter ready, hiding loading screen');
         setIsLoading3D(false);
         frameCounterRef.current = 0;
       }
