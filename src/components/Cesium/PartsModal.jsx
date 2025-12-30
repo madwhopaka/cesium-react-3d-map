@@ -31,6 +31,21 @@ export default function PartBubble({ bubble, anchor, onClose }) {
 
   if (!bubble || !anchor) return null;
 
+  // Helper to format dimensions object
+  const formatDimensions = (dimensions) => {
+    if (!dimensions) return null;
+    const entries = Object.entries(dimensions);
+    if (entries.length === 0) return null;
+    
+    return entries.map(([key, value]) => {
+      const label = key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+      return `${label}: ${value}`;
+    }).join(' • ');
+  };
+
   return (
     <>
       <div
@@ -39,8 +54,8 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           position: "fixed",
           left,
           top,
-          width: 300,
-          maxHeight: 320,
+          width: 320,
+          maxHeight: 400,
           padding: "10px",
           background: "rgba(17, 24, 39, 0.96)",
           backdropFilter: "blur(10px)",
@@ -89,11 +104,25 @@ export default function PartBubble({ bubble, anchor, onClose }) {
             scrollbarColor: "rgba(156, 163, 175, 0.5) transparent",
           }}
         >
-          {/* Title line (speech-style) */}
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ fontSize: 16 }}>{bubble.icon}</span>{" "}
-            <strong>{bubble.label}</strong>
+          {/* Title line */}
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>{bubble.icon}</span>{" "}
+            <strong style={{ fontSize: 15 }}>{bubble.label}</strong>
           </div>
+
+          {/* Manufacturer */}
+          {bubble.manufacturer && (
+            <Paragraph>
+              <Muted>Manufacturer:</Muted> {bubble.manufacturer}
+            </Paragraph>
+          )}
+
+          {/* Dimensions */}
+          {bubble.dimensions && (
+            <Paragraph>
+              <Muted>Dimensions:</Muted> {formatDimensions(bubble.dimensions)}
+            </Paragraph>
+          )}
 
           {/* Position */}
           {bubble.position && (
@@ -109,10 +138,10 @@ export default function PartBubble({ bubble, anchor, onClose }) {
             </Paragraph>
           )}
 
-          {/* Purpose */}
-          {bubble.purpose && (
+          {/* Purpose - use detailedPurpose if available, otherwise use purpose */}
+          {(bubble.detailedPurpose || bubble.purpose) && (
             <Paragraph>
-              <Muted>Purpose:</Muted> {bubble.purpose}
+              <Muted>Purpose:</Muted> {bubble.detailedPurpose || bubble.purpose}
             </Paragraph>
           )}
 
@@ -120,6 +149,13 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           {bubble.material && (
             <Paragraph>
               <Muted>Materials:</Muted> {bubble.material}
+            </Paragraph>
+          )}
+
+          {/* Life Duration */}
+          {bubble.lifeDuration && (
+            <Paragraph>
+              <Muted>Life Duration:</Muted> {bubble.lifeDuration}
             </Paragraph>
           )}
         </div>
@@ -162,7 +198,7 @@ export default function PartBubble({ bubble, anchor, onClose }) {
 /* ---------- helpers ---------- */
 
 function Paragraph({ children }) {
-  return <div style={{ marginBottom: 8 }}>{children}</div>;
+  return <div style={{ marginBottom: 10 }}>{children}</div>;
 }
 
 function Muted({ children }) {

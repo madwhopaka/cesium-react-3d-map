@@ -63,8 +63,8 @@ export const getDistanceToModel = (model, cameraPos, Cesium) => {
 export function computeBubblePosition({
   anchorX,
   anchorY,
-  bubbleWidth = 300,
-  bubbleHeight = 320,
+  bubbleWidth = 320,  // Updated from 300 to match PartBubble
+  bubbleHeight = 400, // Updated from 320 to match PartBubble
   margin = 12,
   tailOffset = 18,
 }) {
