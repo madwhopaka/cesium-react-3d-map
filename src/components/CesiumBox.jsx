@@ -353,7 +353,7 @@ export default function CesiumMap() {
 
     const scene = viewer.scene;
     let stableFrames = 0;
-    const MINIMUM_LOADING_TIME = 3000; // 3 seconds minimum
+    const MINIMUM_LOADING_TIME = 1000; // 3 seconds minimum
 
     const onPostRender = () => {
       const tileset = tilesetRef.current;
