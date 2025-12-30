@@ -128,7 +128,7 @@ export default function CesiumMap() {
           coordinates: Cesium.Rectangle.fromDegrees(-180, -90, 180, 90),
           height: 12000, // Cloud layer at 12km altitude
           material: new Cesium.ImageMaterialProperty({
-            image: '/images/Cloud map.webp',
+            image: '/images/cloud-map.webp',
             repeat: new Cesium.Cartesian2(1, 1),
             transparent: true,
             color: Cesium.Color.WHITE.withAlpha(0.35), // 35% opacity
@@ -159,9 +159,9 @@ export default function CesiumMap() {
 
         // Offset position for blip/label (slightly to the side)
         const offsetPos = Cesium.Cartesian3.fromDegrees(
-          model.lon + 0.00002, // ~2 meters east
-          model.lat + 0.00002, // ~2 meters north
-          model.altitude + (model.towerHeight * 0.3) // 30% up the tower
+          model.lon, // ~2 meters east
+          model.lat, // ~2 meters north
+          model.altitude + (model.towerHeight) // 30% up the tower
         );
 
         const entity = viewer.entities.add({
