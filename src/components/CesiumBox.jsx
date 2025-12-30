@@ -31,6 +31,7 @@ export default function CesiumMap() {
 
   const isFlyingRef = useRef(false);
   const frameCounterRef = useRef(0);
+  const initStartTimeRef = useRef(null); // Track initialization start time
 
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
@@ -45,7 +46,9 @@ export default function CesiumMap() {
   useEffect(() => {
     let viewer;
 
-    setIsLoading3D(true); 
+    setIsLoading3D(true);
+    initStartTimeRef.current = Date.now(); // Record start time
+    
     const init = async () => {
       viewer = new Cesium.Viewer(containerRef.current, {
         terrain: Cesium.Terrain.fromWorldTerrain(),
@@ -72,11 +75,13 @@ export default function CesiumMap() {
       viewer.scene.highDynamicRange = true;
       viewer.scene.light = new Cesium.SunLight();
 
-      // --- Add Clouds/Atmospheric Effects ---
-      // viewer.scene.fog.enabled = true;
-      // viewer.scene.fog.density = 0.001; // Adjust for more/less clouds (0.0001 - 0.001)
-      // viewer.scene.fog.screenSpaceErrorFactor = 2.0;
-      // viewer.scene.fog.minimumBrightness = 0.3;
+      viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.skyAtmosphere.atmosphereLightIntensity = 15.0;
+      
+      viewer.scene.fog.enabled = true;
+      viewer.scene.fog.density = 0.0008;
+      viewer.scene.fog.minimumBrightness = 0.2;
+      viewer.scene.fog.screenSpaceErrorFactor = 2.0;
 
       // --- Photorealistic Tiles ---
       const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(
@@ -84,6 +89,48 @@ export default function CesiumMap() {
       );
       viewer.scene.primitives.add(tileset);
       tilesetRef.current = tileset;
+
+      // --- Custom Skybox ---
+      viewer.scene.skyBox = new Cesium.SkyBox({
+        sources: {
+          positiveX: '/images/Black space.webp',
+          negativeX: '/images/Black space.webp',
+          positiveY: '/images/Black space.webp',
+          negativeY: '/images/Black space.webp',
+          positiveZ: '/images/Black space.webp',
+          negativeZ: '/images/Black space.webp'
+        }
+      });
+      viewer.scene.skyBox.show = true;
+      viewer.scene.skyAtmosphere.show = false;
+      
+      // --- Add Global Cloud Layer (Google Earth style) ---
+      const earthRadius = 6378137.0; // meters (WGS84)
+      const cloudHeight = 12000.0;   // clouds ~12km above surface
+      const cloudSphere = viewer.scene.primitives.add(
+        new Cesium.Primitive({
+          geometryInstances: new Cesium.GeometryInstance({
+            geometry: new Cesium.EllipsoidGeometry({
+              radii: new Cesium.Cartesian3(
+                earthRadius + cloudHeight,
+                earthRadius + cloudHeight,
+                earthRadius + cloudHeight
+              ),
+              vertexFormat: Cesium.MaterialAppearance.VERTEX_FORMAT,
+            }),
+          }),
+          appearance: new Cesium.MaterialAppearance({
+            material: Cesium.Material.fromType("Image", {
+              image: "/images/Cloud map.webp", // MUST be equirectangular
+              transparent: true,
+              color: Cesium.Color.WHITE.withAlpha(0.45),
+            }),
+            faceForward: true,
+            closed: false,
+          }),
+          asynchronous: false,
+        })
+      );
 
       // --- Models, Blips & Labels (separated) ---
       MODELS.forEach((model) => {
@@ -155,13 +202,16 @@ export default function CesiumMap() {
 
       setEntitiesReady(true);
 
-      // ====== Camera Distance Visibility Control ======
+      // ====== Camera Distance Visibility Control + Smart Button ======
       const onCameraChange = () => {
         const cameraPos = viewer.camera.positionWC;
         setPartBubble(null);
+        
+        let closestModel = null;
+        let closestDistance = Infinity;
+        
         MODELS.forEach((model) => {
           const entity = entityMapRef.current[model.id];
-          // Blip and label now stay visible at all distances
           if (!entity) return;
 
           const modelPos = Cesium.Cartesian3.fromDegrees(
@@ -172,6 +222,12 @@ export default function CesiumMap() {
           const distance = Cesium.Cartesian3.distance(cameraPos, modelPos);
           const threshold = model.towerHeight * 8;
 
+          // Track closest model
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestModel = model;
+          }
+
           // Only toggle the 3D model visibility
           if (distance < threshold * 1.2) {
             entity.show = true;
@@ -179,6 +235,20 @@ export default function CesiumMap() {
             entity.show = false;
           }
         });
+        
+        // Smart button visibility logic
+        const BUTTON_SHOW_THRESHOLD = 50000; // Show button if within 50km of any model
+        const BUTTON_HIDE_THRESHOLD = 100000; // Hide button if farther than 100km
+        
+        if (closestDistance < BUTTON_SHOW_THRESHOLD) {
+          // Close to a model - show button and update reference
+          activeModelRef.current = closestModel;
+          setShowViewModelButton(true);
+        } else if (closestDistance > BUTTON_HIDE_THRESHOLD) {
+          // Far from all models (globe view) - hide button
+          setShowViewModelButton(false);
+          activeModelRef.current = null;
+        }
       };
 
       // Store listener reference for removal during flyTo
@@ -266,6 +336,7 @@ export default function CesiumMap() {
 
     const scene = viewer.scene;
     let stableFrames = 0;
+    const MINIMUM_LOADING_TIME = 4000; // 4 seconds minimum for cloud rendering
 
     const onPostRender = () => {
       const tileset = tilesetRef.current;
@@ -277,7 +348,17 @@ export default function CesiumMap() {
       if (!isFlyingRef.current && tilesReady) {
         stableFrames++;
         if (stableFrames >= 5) {
-          setIsLoading3D(false);
+          // Check if minimum loading time has passed
+          const elapsedTime = Date.now() - initStartTimeRef.current;
+          if (elapsedTime >= MINIMUM_LOADING_TIME) {
+            setIsLoading3D(false);
+          } else {
+            // Wait for remaining time
+            const remainingTime = MINIMUM_LOADING_TIME - elapsedTime;
+            setTimeout(() => {
+              setIsLoading3D(false);
+            }, remainingTime);
+          }
         }
       } else {
         stableFrames = 0;
@@ -294,6 +375,7 @@ useEffect(() => {
   if (!viewer) return;
 
   const scene = viewer.scene;
+  const MINIMUM_LOADING_TIME = 4000; // 4 seconds minimum
 
   const onPostRender = () => {
     // Still flying → keep loader
@@ -304,8 +386,12 @@ useEffect(() => {
 
     // After ~20 frames (~300ms @ 60fps)
     if (frameCounterRef.current > 20) {
-      setIsLoading3D(false);
-      frameCounterRef.current = 0;
+      // Check if minimum loading time has passed
+      const elapsedTime = Date.now() - initStartTimeRef.current;
+      if (elapsedTime >= MINIMUM_LOADING_TIME) {
+        setIsLoading3D(false);
+        frameCounterRef.current = 0;
+      }
     }
   };
 
@@ -389,12 +475,11 @@ const flyToModel = (modelId) => {
           // RE-ADD camera listener after flyTo completes
           if (viewer.cameraChangeListener) {
             viewer.camera.changed.addEventListener(viewer.cameraChangeListener);
-            viewer.cameraChangeListener(); // Run once to update visibility
+            viewer.cameraChangeListener(); // Run once to update visibility and button
           }
           
           setIsLoading3D(false);
           isFlyingRef.current = false;
-          setShowViewModelButton(true); // Show the view model button
           console.log(`✅ Arrived at ${model.name}`);
         }, 3000);
       },
