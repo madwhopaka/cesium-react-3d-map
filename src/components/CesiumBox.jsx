@@ -269,14 +269,7 @@ export default function CesiumMap() {
             const key = normalizeNodeName(raw);
             const part = model.parts?.[key] || model.parts?.[raw];
             if (part) {
-              setPartBubble({
-                icon: part.icon,
-                label: part.label,
-                position:part.partPosition, 
-                positionReason: part.positionReason, 
-                purpose: part.purpose, 
-                material: part.material
-              });
+              setPartBubble(part);
             
               setBubbleAnchor({
                 x: movement.position.x,

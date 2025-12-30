@@ -52,9 +52,9 @@ export default function ModelViewer() {
   useEffect(() => {
     if (!model) return;
 
-    // Scene setup
+    // Scene setup with off-white background
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
+    scene.background = new THREE.Color('#dbd9d3');
     sceneRef.current = scene;
 
     // Camera
@@ -269,14 +269,7 @@ export default function ModelViewer() {
             // Record when bubble was set to prevent immediate clearing
             bubbleSetTimeRef.current = Date.now();
             
-            setPartBubble({
-              icon: part.icon,
-              label: part.label,
-              position: part.partPosition,
-              positionReason: part.positionReason,
-              purpose: part.purpose,
-              material: part.material,
-            });
+            setPartBubble(part);
 
             setBubbleAnchor({
               x: event.clientX,
@@ -345,7 +338,7 @@ export default function ModelViewer() {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#f9fafb',
+        backgroundColor: '#bdc2c6ff',
         color: '#111827',
         flexDirection: 'column',
         gap: '20px'
@@ -368,13 +361,13 @@ export default function ModelViewer() {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: 'white' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: '#f8f9fa' }}>
       {/* Loading Screen */}
       {isLoading && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: 'rgba(230, 232, 234, 0.95)',
           backdropFilter: 'blur(10px)',
           display: 'flex',
           flexDirection: 'column',
@@ -418,7 +411,7 @@ export default function ModelViewer() {
             left: '20px',
             zIndex: 1000,
             padding: '12px 24px',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backgroundColor: 'rgba(219, 215, 215, 0.95)',
             color: '#111827',
             textDecoration: 'none',
             borderRadius: '8px',
@@ -449,9 +442,6 @@ export default function ModelViewer() {
         }}
       >
         <h2 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '600' }}>{model.name}</h2>
-        <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>
-          Height: {model.towerHeight}m
-        </p>
       </div>
 
       <div ref={containerRef} style={{ 
