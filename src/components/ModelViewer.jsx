@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MODEL_LOOKUP } from "../constants/models";
 import { normalizeNodeName } from "../helpers/helper";
@@ -26,6 +27,17 @@ export default function ModelViewer() {
   const model = MODEL_LOOKUP[modelId];
   const [partBubble, setPartBubble] = useState(null);
   const [bubbleAnchor, setBubbleAnchor] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Safety timeout: ensure loading screen disappears after 5 seconds max
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      console.log('⏱️ Loading timeout reached (5s)');
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     if (!model) return;
@@ -47,6 +59,10 @@ export default function ModelViewer() {
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
     renderer.setSize(width, height);
@@ -77,6 +93,20 @@ export default function ModelViewer() {
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
     fillLight.position.set(-50, 50, -50);
     scene.add(fillLight);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    
+    new RGBELoader()
+      .setPath("/hdr/") // folder where your .hdr lives
+      .load("simple-light.hdr", (hdrTexture) => {
+        const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
+    
+        scene.environment = envMap; // ✅ PBR lighting
+    
+        hdrTexture.dispose();
+        pmremGenerator.dispose();
+      });
 
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -153,15 +183,17 @@ export default function ModelViewer() {
         controls.target.set(0, 0, 0);
         controls.update();
         
-        // Mark model as loaded after a brief delay to ensure setup is complete
+        // Mark model as loaded and hide loading screen
         setTimeout(() => {
           modelLoadedRef.current = true;
+          setIsLoading(false);
           console.log('✅ Model fully loaded and ready for interaction');
         }, 500);
       },
       undefined,
       (error) => {
         console.error('Error loading model:', error);
+        setIsLoading(false); // Hide loading screen even on error
       }
     );
 
@@ -327,6 +359,46 @@ export default function ModelViewer() {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: 'white' }}>
+      {/* Loading Screen */}
+      {isLoading && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          gap: '24px',
+        }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            border: '4px solid #e5e7eb',
+            borderTop: '4px solid #667eea',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <div style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#111827',
+          }}>
+            Loading 3D Model...
+          </div>
+          <style>
+            {`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}
+          </style>
+        </div>
+      )}
+
       <Link
         to="/"
         style={{
