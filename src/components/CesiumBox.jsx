@@ -14,6 +14,7 @@ import {
   BLIP_CONFIG,
 } from "../constants/config";
 import { normalizeNodeName } from "../helpers/helper";
+import PartBubble from "./Cesium/PartsModal";
 
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
@@ -25,6 +26,7 @@ export default function CesiumMap() {
 
   const entityMapRef = useRef({});
   const blipMapRef = useRef({});
+  const labelMapRef = useRef({}); // NEW: Separate labels
   const activeModelRef = useRef(null);
 
   const isFlyingRef = useRef(false);
@@ -32,6 +34,8 @@ export default function CesiumMap() {
 
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeModal, setActiveModal] = useState(null);
+  const [partBubble, setPartBubble] = useState(null);
+  const [bubbleAnchor, setBubbleAnchor] = useState(null);
   const [isLoading3D, setIsLoading3D] = useState(false);
   const [entitiesReady, setEntitiesReady] = useState(false);
   const [showViewModelButton, setShowViewModelButton] = useState(false);
@@ -75,12 +79,19 @@ export default function CesiumMap() {
       viewer.scene.primitives.add(tileset);
       tilesetRef.current = tileset;
 
-      // --- Models & Blips ---
+      // --- Models, Blips & Labels (separated) ---
       MODELS.forEach((model) => {
         const pos = Cesium.Cartesian3.fromDegrees(
           model.lon,
           model.lat,
           model.altitude
+        );
+
+        // Offset position for blip/label (slightly to the side)
+        const offsetPos = Cesium.Cartesian3.fromDegrees(
+          model.lon + 0.00002, // ~2 meters east
+          model.lat + 0.00002, // ~2 meters north
+          model.altitude + (model.towerHeight * 0.3) // 30% up the tower
         );
 
         const entity = viewer.entities.add({
@@ -98,13 +109,19 @@ export default function CesiumMap() {
         entity.modelId = model.id;
         entityMapRef.current[model.id] = entity;
 
+        // Blip (marker icon only) - now always visible
         blipMapRef.current[model.id] = viewer.entities.add({
-          position: pos,
+          position: offsetPos,
           billboard: {
             image: BLIP_CONFIG.imageUrl,
             scale: BLIP_CONFIG.scale,
-            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
           },
+        });
+
+        // Label (separate entity - always visible)
+        labelMapRef.current[model.id] = viewer.entities.add({
+          position: offsetPos,
           label: {
             text: model.name,
             font: BLIP_CONFIG.labelFont,
@@ -135,11 +152,11 @@ export default function CesiumMap() {
       // ====== Camera Distance Visibility Control ======
       const onCameraChange = () => {
         const cameraPos = viewer.camera.positionWC;
-
+        setPartBubble(null);
         MODELS.forEach((model) => {
           const entity = entityMapRef.current[model.id];
-          const blip = blipMapRef.current[model.id];
-          if (!entity || !blip) return;
+          // Blip and label now stay visible at all distances
+          if (!entity) return;
 
           const modelPos = Cesium.Cartesian3.fromDegrees(
             model.lon,
@@ -149,12 +166,11 @@ export default function CesiumMap() {
           const distance = Cesium.Cartesian3.distance(cameraPos, modelPos);
           const threshold = model.towerHeight * 8;
 
+          // Only toggle the 3D model visibility
           if (distance < threshold * 1.2) {
             entity.show = true;
-            blip.show = false;
           } else {
             entity.show = false;
-            blip.show = true;
           }
         });
       };
@@ -170,6 +186,10 @@ export default function CesiumMap() {
       handler.setInputAction((movement) => {
         const picked = viewer.scene.pick(movement.position);
 
+        console.log('picked',picked); 
+        setPartBubble(null);
+        setBubbleAnchor(null); 
+
         if (picked?.detail?.node && picked?.id) {
           const modelId = picked.id.modelId;
           const model = MODEL_LOOKUP[modelId];
@@ -178,14 +198,18 @@ export default function CesiumMap() {
             const key = normalizeNodeName(raw);
             const part = model.parts?.[key] || model.parts?.[raw];
             if (part) {
-               setActiveModal({
-                partKey:key,
-                label: part.label,
+              setPartBubble({
                 icon: part.icon,
-                partPosition: part.position,
-                positionReason: part.positionReason,
-                purpose: part.purpose,
-                material: part.material,
+                label: part.label,
+                position:part.partPosition, 
+                positionReason: part.positionReason, 
+                purpose: part.purpose, 
+                material: part.material
+              });
+            
+              setBubbleAnchor({
+                x: movement.position.x,
+                y: movement.position.y,
               });
               return;
             }
@@ -388,7 +412,11 @@ const flyToModel = (modelId) => {
 
       <div ref={containerRef} style={{ position: "fixed", inset: 0 }} />
 
-      <PartModal modal={activeModal} onClose={() => setActiveModal(null)} />
+      <PartBubble
+        bubble={partBubble}
+        anchor={bubbleAnchor}
+        onClose={() => setPartBubble(null)}
+      />
 
       {/* Floating View 3D Model Button */}
       {showViewModelButton && activeModelRef.current && (

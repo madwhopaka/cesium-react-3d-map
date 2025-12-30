@@ -1,131 +1,228 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import * as Cesium from "cesium";
-import "cesium/Build/Cesium/Widgets/widgets.css";
-import { MODELS, MODEL_LOOKUP } from "../constants/models";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { MODEL_LOOKUP } from "../constants/models";
 import { normalizeNodeName } from "../helpers/helper";
-import PartModal from "./Cesium/PartsModal";
 import PartBubble from "./Cesium/PartsModal";
 
-Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
+// Note: Make sure you've removed the Cesium imports from the top of this file
+// Remove: import * as Cesium from "cesium";
+// Remove: import "cesium/Build/Cesium/Widgets/widgets.css";
+// Remove: Cesium.Ion.defaultAccessToken line
 
 export default function ModelViewer() {
   const { modelId } = useParams();
   const containerRef = useRef(null);
-  const viewerRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const rendererRef = useRef(null);
+  const controlsRef = useRef(null);
+  const modelRef = useRef(null);
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const mouseRef = useRef(new THREE.Vector2());
 
   const model = MODEL_LOOKUP[modelId];
-
-  const [activeModal, setActiveModal] = useState(null);
   const [partBubble, setPartBubble] = useState(null);
   const [bubbleAnchor, setBubbleAnchor] = useState(null);
-
 
   useEffect(() => {
     if (!model) return;
 
-    let viewer;
+    // Scene setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+    sceneRef.current = scene;
 
-    const init = async () => {
-      viewer = new Cesium.Viewer(containerRef.current, {
-        terrain: undefined,
-        timeline: false,
-        animation: false,
-        baseLayerPicker: false,
-        geocoder: false,
-        navigationHelpButton: false,
-        homeButton: false,
-        sceneModePicker: false,
-        infoBox: false,
-        selectionIndicator: false,
-      });
+    // Camera
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      containerRef.current.clientWidth / containerRef.current.clientHeight,
+      0.1,
+      10000
+    );
+    camera.position.set(100, 100, 100); // Set initial position
+    cameraRef.current = camera;
 
-      viewer.scene.backgroundColor = Cesium.Color.WHITE;
-      viewer.scene.globe.show = false;
-      viewer.scene.skyAtmosphere = undefined;
-      viewer.scene.highDynamicRange = true;
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const width = containerRef.current.clientWidth;
+    const height = containerRef.current.clientHeight;
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // Make sure canvas fills container
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0';
+    renderer.domElement.style.left = '0';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    
+    containerRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
 
-      viewerRef.current = viewer;
+    // Lighting - bright setup for white background
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
 
-      viewer.scene.light = new Cesium.DirectionalLight({
-        direction: new Cesium.Cartesian3(0.5, 0.5, -0.8),
-        intensity: 2.0,
-      });
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(50, 100, 50);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    scene.add(directionalLight);
 
-      const entity = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(0, 0, 0),
-        model: {
-          uri: model.uri,
-          scale: model.scale,
-          minimumPixelSize: 64,
-          maximumScale: 50000,
-          shadows: Cesium.ShadowMode.DISABLED,
-        },
-      });
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    fillLight.position.set(-50, 50, -50);
+    scene.add(fillLight);
 
-      entity.modelId = model.id;
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 10;
+    controls.maxDistance = 1000;
+    controlsRef.current = controls;
 
-      await viewer.zoomTo(entity, new Cesium.HeadingPitchRange(
-        Cesium.Math.toRadians(45),
-        Cesium.Math.toRadians(-25),
-        model.towerHeight * 2
-      ));
+    // Close bubble on camera movement
+    controls.addEventListener('change', () => {
+      setPartBubble(null);
+      setBubbleAnchor(null);
+    });
 
-      viewer.camera.changed.addEventListener(() => {
-        setPartBubble(null);
-      });
+    // Load model
+    const loader = new GLTFLoader();
+    loader.load(
+      model.uri,
+      (gltf) => {
+        const loadedModel = gltf.scene;
+        loadedModel.scale.set(model.scale, model.scale, model.scale);
+        
+        // Enable shadows
+        loadedModel.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
 
-      // ========== ADDED: Click handler for parts ==========
-      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-      handler.setInputAction((movement) => {
-        const picked = viewer.scene.pick(movement.position);
+        scene.add(loadedModel);
+        modelRef.current = loadedModel;
 
-        if (picked?.detail?.node && picked?.id) {
-          const pickedModelId = picked.id.modelId;
-          const pickedModel = MODEL_LOOKUP[pickedModelId];
-          
-          if (pickedModel) {
-            const raw = picked.detail.node._name;
-            const key = normalizeNodeName(raw);
-            const part = pickedModel.parts?.[key] || pickedModel.parts?.[raw];
-            
-            if (part) {
-              // setActiveModal({
-              //   label: part.label,
-              //   icon: part.icon,
-              //   partPosition: part.position,
-              //   positionReason: part.positionReason,
-              //   purpose: part.purpose,
-              //   material: part.material,
-              // });
+        // Center the model
+        const box = new THREE.Box3().setFromObject(loadedModel);
+        const center = box.getCenter(new THREE.Vector3());
+        loadedModel.position.sub(center);
 
-              setPartBubble({
-                icon: part.icon,
-                label: part.label,
-                position:part.partPosition, 
-                positionReason: part.positionReason, 
-                purpose: part.purpose, 
-                material: part.material
-              });
-            
-              setBubbleAnchor({
-                x: movement.position.x,
-                y: movement.position.y,
-              });
-              
-              console.log(`🖱️ Clicked: ${part.label} (${key})`);
-            }
+        // Adjust camera to fit model
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const distance = maxDim * 2;
+        
+        camera.position.set(
+          distance * 0.7,
+          distance * 0.5,
+          distance * 0.7
+        );
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading model:', error);
+      }
+    );
+
+    // Click handler for parts
+    const handleClick = (event) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycasterRef.current.setFromCamera(mouseRef.current, camera);
+      
+      console.log('picked');
+      
+      // Close any existing bubble first
+      setPartBubble(null);
+      setBubbleAnchor(null);
+
+      if (!modelRef.current) return;
+
+      const intersects = raycasterRef.current.intersectObjects(
+        modelRef.current.children,
+        true
+      );
+
+      if (intersects.length > 0) {
+        const intersected = intersects[0].object;
+        const nodeName = intersected.name || intersected.parent?.name;
+        
+        console.log('Clicked object:', nodeName);
+
+        if (nodeName) {
+          const key = normalizeNodeName(nodeName);
+          const part = model.parts?.[key] || model.parts?.[nodeName] || model.parts?.[nodeName.replace(/_/g, " ")];
+
+          if (part) {
+            setPartBubble({
+              icon: part.icon,
+              label: part.label,
+              position: part.partPosition,
+              positionReason: part.positionReason,
+              purpose: part.purpose,
+              material: part.material,
+            });
+
+            setBubbleAnchor({
+              x: event.clientX,
+              y: event.clientY,
+            });
+
+            console.log(`🖱️ Clicked: ${part.label} (${key})`);
+            return;
           }
         }
-      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-      // ========== END ADDED ==========
+      }
+
+      // If we get here, nothing was picked - bubble is already closed
+      console.log("❌ No part picked");
     };
 
-    init();
+    renderer.domElement.addEventListener('click', handleClick);
 
+    // Animation loop
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Handle resize
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+      
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
     return () => {
-      if (viewer && !viewer.isDestroyed()) {
-        viewer.destroy();
+      window.removeEventListener('resize', handleResize);
+      renderer.domElement.removeEventListener('click', handleClick);
+      controls.dispose();
+      renderer.dispose();
+      if (containerRef.current && renderer.domElement) {
+        containerRef.current.removeChild(renderer.domElement);
       }
     };
   }, [model]);
@@ -160,7 +257,7 @@ export default function ModelViewer() {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: 'white' }}>
       <Link
         to="/"
         style={{
@@ -169,13 +266,15 @@ export default function ModelViewer() {
           left: '20px',
           zIndex: 1000,
           padding: '12px 24px',
-          backgroundColor: 'white',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
           color: '#111827',
           textDecoration: 'none',
           borderRadius: '8px',
           boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
           fontSize: '14px',
           fontWeight: '500',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(0,0,0,0.1)',
         }}
       >
         ← Back to Map
@@ -188,10 +287,12 @@ export default function ModelViewer() {
           right: '20px',
           zIndex: 1000,
           padding: '16px 24px',
-          backgroundColor: 'white',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
           color: '#111827',
           borderRadius: '8px',
           boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(0,0,0,0.1)',
         }}
       >
         <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '600' }}>{model.name}</h2>
@@ -200,12 +301,22 @@ export default function ModelViewer() {
         </p>
       </div>
 
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      <div ref={containerRef} style={{ 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%', 
+        height: '100%',
+        overflow: 'hidden'
+      }} />
 
       <PartBubble
         bubble={partBubble}
         anchor={bubbleAnchor}
-        onClose={() => setPartBubble(null)}
+        onClose={() => {
+          setPartBubble(null);
+          setBubbleAnchor(null);
+        }}
       />
     </div>
   );
