@@ -72,6 +72,12 @@ export default function CesiumMap() {
       viewer.scene.highDynamicRange = true;
       viewer.scene.light = new Cesium.SunLight();
 
+      // --- Add Clouds/Atmospheric Effects ---
+      // viewer.scene.fog.enabled = true;
+      // viewer.scene.fog.density = 0.001; // Adjust for more/less clouds (0.0001 - 0.001)
+      // viewer.scene.fog.screenSpaceErrorFactor = 2.0;
+      // viewer.scene.fog.minimumBrightness = 0.3;
+
       // --- Photorealistic Tiles ---
       const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(
         CESIUM_CONFIG.TILESET_ASSET_ID
