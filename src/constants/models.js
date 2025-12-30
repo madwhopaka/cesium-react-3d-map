@@ -9,13 +9,13 @@
 export const MODELS = [
   {
     id: "tower_1",
-    name: "Tower 1 - Mountain Area",
+    name: "Central Honshu, Guyed Lattice Tower",
     lon: 139.446046,
     lat: 36.343633,
     altitude: 177,
     towerHeight: 100,
     scale: 2,
-    uri: "/models/Tower 1.glb",
+    uri: "/models/Tower 1 new.glb",
     parts: {
       "blip 1 (lightning arrestor)": {
         label: "Lightning Arrestor with RF Omni Antenna",
@@ -118,13 +118,13 @@ export const MODELS = [
   },
   {
     id: "tower_2",
-    name: "Tower 2 - Building Top",
+    name: "Shinjuku area, Cellular monopole Tower",
     lon: 139.696634,
     lat: 35.689771,
     altitude: 115.8, // On top of 150m building
     towerHeight: 20, // Tower is 60m tall
     scale: 18,
-    uri: "/models/Tower 2.glb",
+    uri: "/models/Tower 2 new.glb",
     parts: {
       "blip 1 (massive mimo antennas)": {
         label: "Massive MIMO Antenna Array (5G)",
@@ -270,13 +270,13 @@ export const MODELS = [
   },
   {
     id: "tower_3",
-    name: "Tower 3 - Open Flat Land",
+    name: "Yokohama Bay, Lattice communication Tower",
     lon: 139.339381,
     lat: 35.369106,
     altitude: 45.9, // Flat ground
     towerHeight: 50, // Standard lattice tower
     scale: 10,
-    uri: "/models/Tower 3.glb",
+    uri: "/models/Tower 3 new.glb",
     parts: {
       "blip 1 (sector panel antennas)": {
         label: "Sector Panel Antennas (Multi-Band)",
