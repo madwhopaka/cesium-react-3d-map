@@ -600,12 +600,12 @@ const flyToModel = (modelId) => {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            // backgroundColor: 'rgba(0, 0, 0, 0.85)',
             zIndex: 10000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backdropFilter: 'blur(10px)',
+            backdropFilter: 'blur(4px)',
           }}
           onClick={() => setShowMiniViewer(false)}
         >

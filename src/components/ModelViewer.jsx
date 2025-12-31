@@ -54,7 +54,7 @@ export default function ModelViewer() {
 
     // Scene setup with off-white background
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#dbd9d3');
+    scene.background = new THREE.Color('#bdbdbd');
     sceneRef.current = scene;
 
     // Camera
