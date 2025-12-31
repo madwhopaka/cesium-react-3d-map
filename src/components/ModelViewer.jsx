@@ -118,12 +118,15 @@ export default function ModelViewer() {
         pmremGenerator.dispose();
       });
 
-    // Controls
+    // Controls with enhanced zoom range
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 10;
-    controls.maxDistance = 1000;
+    controls.minDistance = 0.5;      // Allow zooming VERY close (was 10)
+    controls.maxDistance = 1000;     // Allow zooming VERY far (was 1000)
+    controls.zoomSpeed = 1.0;        // Slightly faster zoom
+    controls.enablePan = true;       // Enable panning
+    controls.panSpeed = 0.8;
     controlsRef.current = controls;
 
     // Track when user starts interacting
