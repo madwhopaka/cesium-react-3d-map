@@ -43,6 +43,7 @@ export default function CesiumMap() {
   const [showViewModelButton, setShowViewModelButton] = useState(false);
   const [isModelVisible, setIsModelVisible] = useState(false);
   const [showMiniViewer, setShowMiniViewer] = useState(false); // Mini viewer modal state
+  const cloudLayerRef = useRef(null); // Track cloud layer entity
 
   /* ---------------- INIT ---------------- */
   useEffect(() => {
@@ -77,13 +78,13 @@ export default function CesiumMap() {
       viewer.scene.highDynamicRange = true;
       viewer.scene.light = new Cesium.SunLight();
 
-      viewer.scene.skyAtmosphere.show = true;
-      viewer.scene.skyAtmosphere.atmosphereLightIntensity = 15.0;
+      // viewer.scene.skyAtmosphere.show = true;
+      // viewer.scene.skyAtmosphere.atmosphereLightIntensity = 15.0;
       
-      viewer.scene.fog.enabled = true;
-      viewer.scene.fog.density = 0.0008;
-      viewer.scene.fog.minimumBrightness = 0.2;
-      viewer.scene.fog.screenSpaceErrorFactor = 2.0;
+      // viewer.scene.fog.enabled = true;
+      // viewer.scene.fog.density = 0.0008;
+      // viewer.scene.fog.minimumBrightness = 0.2;
+      // viewer.scene.fog.screenSpaceErrorFactor = 2.0;
 
       // --- Photorealistic Tiles ---
       const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(
@@ -121,6 +122,32 @@ export default function CesiumMap() {
       viewer.scene.skyBox = new Cesium.SkyBox({ sources: skyboxSources });
       viewer.scene.skyBox.show = true;
       viewer.scene.skyAtmosphere.show = false;
+
+      const cloudLayer = viewer.entities.add({
+        rectangle: {
+          coordinates: Cesium.Rectangle.fromDegrees(-180, -90, 180, 90),
+          height: 12000, // Cloud layer at 12km altitude
+          material: new Cesium.ImageMaterialProperty({
+            image: '/images/cloud-map.webp',
+            repeat: new Cesium.Cartesian2(1, 1),
+            transparent: true,
+            color: Cesium.Color.WHITE.withAlpha(0.35), // 35% opacity
+          }),
+        },
+      });
+      
+      cloudLayerRef.current = cloudLayer;
+      
+      // Track cloud layer image loading
+      const cloudImg = new Image();
+      cloudImg.onload = () => {
+        console.log('✅ Cloud layer loaded');
+        // Give a moment for rendering
+        setTimeout(() => {
+          viewer.scene.requestRender();
+        }, 100);
+      };
+      cloudImg.src = '/images/cloud-map.webp';
 
       // --- Models, Blips & Labels (separated) ---
       console.log('🏗️ Creating models, blips, and labels for', MODELS.length, 'towers');
