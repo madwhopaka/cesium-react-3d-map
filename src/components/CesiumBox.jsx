@@ -14,6 +14,7 @@ import {
   BLIP_CONFIG,
 } from "../constants/config";
 import { normalizeNodeName } from "../helpers/helper";
+import { debounce } from "../utils/performanceUtils";
 import PartBubble from "./Cesium/PartsModal";
 
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
@@ -70,7 +71,8 @@ export default function CesiumMap() {
       viewer.scene.completeMorph();
 
       viewer.scene.requestRenderMode = true;
-      viewer.scene.maximumRenderTimeChange = Infinity;
+      // Set proper frame rate limit: 60fps = 1/60 seconds per frame
+      viewer.scene.maximumRenderTimeChange = 1 / 60;
 
       viewerRef.current = viewer;
 
@@ -94,31 +96,27 @@ export default function CesiumMap() {
       tilesetRef.current = tileset;
 
       // --- Custom Skybox ---
+      const skyboxImageUrl = '/images/Black space.webp';
       const skyboxSources = {
-        positiveX: '/images/Black space.webp',
-        negativeX: '/images/Black space.webp',
-        positiveY: '/images/Black space.webp',
-        negativeY: '/images/Black space.webp',
-        positiveZ: '/images/Black space.webp',
-        negativeZ: '/images/Black space.webp'
+        positiveX: skyboxImageUrl,
+        negativeX: skyboxImageUrl,
+        positiveY: skyboxImageUrl,
+        negativeY: skyboxImageUrl,
+        positiveZ: skyboxImageUrl,
+        negativeZ: skyboxImageUrl
       };
-      
-      // Track skybox image loading
-      let skyboxImagesLoaded = 0;
-      const totalSkyboxImages = 6;
-      
-      Object.values(skyboxSources).forEach(src => {
-        const img = new Image();
-        img.onload = () => {
-          skyboxImagesLoaded++;
-          if (skyboxImagesLoaded === totalSkyboxImages) {
-            skyboxLoadedRef.current = true;
-            console.log('✅ Skybox loaded');
-          }
-        };
-        img.src = src;
-      });
-      
+
+      // Load skybox with single image load monitoring
+      const skyboxImg = new Image();
+      skyboxImg.onerror = () => {
+        console.error('Skybox image failed to load');
+        skyboxLoadedRef.current = true; // Proceed anyway
+      };
+      skyboxImg.onload = () => {
+        skyboxLoadedRef.current = true;
+      };
+      skyboxImg.src = skyboxImageUrl;
+
       viewer.scene.skyBox = new Cesium.SkyBox({ sources: skyboxSources });
       viewer.scene.skyBox.show = true;
       viewer.scene.skyAtmosphere.show = false;
@@ -225,13 +223,14 @@ export default function CesiumMap() {
       setEntitiesReady(true);
 
       // ====== Camera Distance Visibility Control + Smart Button ======
+      // Debounced camera listener: only runs every 500ms instead of every frame
       const onCameraChange = () => {
         const cameraPos = viewer.camera.positionWC;
         setPartBubble(null);
-        
+
         let closestModel = null;
         let closestDistance = Infinity;
-        
+
         MODELS.forEach((model) => {
           const entity = entityMapRef.current[model.id];
           if (!entity) return;
@@ -257,27 +256,27 @@ export default function CesiumMap() {
             entity.show = false;
           }
         });
-        
-        // Smart button visibility logic
-        const BUTTON_SHOW_THRESHOLD = 50000; // Show button if within 50km of any model
-        const BUTTON_HIDE_THRESHOLD = 100000; // Hide button if farther than 100km
-        
+
+        // Smart button visibility logic with hysteresis
+        const BUTTON_SHOW_THRESHOLD = 50000;
+        const BUTTON_HIDE_THRESHOLD = 100000;
+
         if (closestDistance < BUTTON_SHOW_THRESHOLD) {
-          // Close to a model - show button and update reference
           activeModelRef.current = closestModel;
           setShowViewModelButton(true);
         } else if (closestDistance > BUTTON_HIDE_THRESHOLD) {
-          // Far from all models (globe view) - hide button
           setShowViewModelButton(false);
           activeModelRef.current = null;
         }
       };
 
-      // Store listener reference for removal during flyTo
-      viewer.cameraChangeListener = onCameraChange;
-      viewer.camera.changed.addEventListener(onCameraChange);
-      onCameraChange();
-      // ====== END ADDED ======
+      // Debounce camera listener to run every 500ms instead of every frame
+      const debouncedCameraChange = debounce(onCameraChange, 500);
+
+      viewer.cameraChangeListener = debouncedCameraChange;
+      viewer.camera.changed.addEventListener(debouncedCameraChange);
+      onCameraChange(); // Initial call
+      // ====== END CAMERA VISIBILITY ======
 
       // --- Click Handler (parts + coords) ---
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -388,40 +387,6 @@ export default function CesiumMap() {
     scene.postRender.addEventListener(onPostRender);
     return () => scene.postRender.removeEventListener(onPostRender);
   }, []);
-
-
-useEffect(() => {
-  const viewer = viewerRef.current;
-  if (!viewer) return;
-
-  const scene = viewer.scene;
-  const MINIMUM_LOADING_TIME = 2000; // 2 seconds minimum
-
-  const onPostRender = () => {
-    // Still flying → keep loader
-    if (isFlyingRef.current) return;
-
-    // Check if skybox is loaded
-    if (!skyboxLoadedRef.current) return;
-
-    // Camera done → count frames
-    frameCounterRef.current += 1;
-
-    // After ~20 frames (~300ms @ 60fps)
-    if (frameCounterRef.current > 20) {
-      // Check if minimum loading time has passed
-      const elapsedTime = Date.now() - initStartTimeRef.current;
-      if (elapsedTime >= MINIMUM_LOADING_TIME) {
-        console.log('✅ Frame counter ready, hiding loading screen');
-        setIsLoading3D(false);
-        frameCounterRef.current = 0;
-      }
-    }
-  };
-
-  scene.postRender.addEventListener(onPostRender);
-  return () => scene.postRender.removeEventListener(onPostRender);
-}, []);
 
 
   /* ---------------- FLY TO MODEL ---------------- */

@@ -6,6 +6,7 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MODEL_LOOKUP } from "../constants/models";
 import { normalizeNodeName } from "../helpers/helper";
+import { disposeMaterial, disposeTexture, debounce } from "../utils/performanceUtils";
 import PartBubble from "./Cesium/PartsModal";
 
 export default function ModelViewer() {
@@ -18,7 +19,17 @@ export default function ModelViewer() {
   const modelRef = useRef(null);
   const raycasterRef = useRef(new THREE.Raycaster());
   const mouseRef = useRef(new THREE.Vector2());
-  
+
+  // Performance optimization: idle rendering with dirty flag
+  const needsRenderRef = useRef(true);
+  const resizeTimeoutRef = useRef(null);
+  const isLoadingRef = useRef(true); // Track loading state in ref
+
+  // Resource tracking for proper cleanup
+  const pmremGeneratorRef = useRef(null);
+  const hdrTextureRef = useRef(null);
+  const envMapRef = useRef(null);
+
   // Track if user is actively interacting to prevent premature bubble clearing
   const isUserInteractingRef = useRef(false);
   const bubbleSetTimeRef = useRef(0);
@@ -42,15 +53,22 @@ export default function ModelViewer() {
   // Safety timeout: ensure loading screen disappears after 5 seconds max
   useEffect(() => {
     const timeout = setTimeout(() => {
+      console.log('⏱️ Loading timeout reached (5s) - forcing render');
+      isLoadingRef.current = false;
+      needsRenderRef.current = true; // Force at least one render
       setIsLoading(false);
-      console.log('⏱️ Loading timeout reached (5s)');
     }, 5000);
 
     return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
-    if (!model) return;
+    if (!model) {
+      console.log('⚠️ Model not found - component will show error');
+      return;
+    }
+
+    console.log('🔧 ModelViewer initializing for model:', model.name);
 
     // Scene setup with off-white background
     const scene = new THREE.Scene();
@@ -69,23 +87,29 @@ export default function ModelViewer() {
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
 
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Optimize pixel ratio: cap at 2.0 to avoid 4-9x rendering cost on high-DPI devices
+    const maxPixelRatio = 2.0;
+    const pixelRatio = Math.min(window.devicePixelRatio, maxPixelRatio);
+    renderer.setPixelRatio(pixelRatio);
+
     renderer.shadowMap.enabled = true;
+    // Reduce shadow map to 1024x1024 (4x more efficient than 2048x2048)
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    
+
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
     renderer.domElement.style.left = '0';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
-    
+
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -96,8 +120,9 @@ export default function ModelViewer() {
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(50, 100, 50);
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
+    // Optimize: reduce shadow map from 2048 to 1024 (4x more efficient)
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
     scene.add(directionalLight);
 
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
@@ -105,33 +130,50 @@ export default function ModelViewer() {
     scene.add(fillLight);
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGeneratorRef.current = pmremGenerator;
     pmremGenerator.compileEquirectangularShader();
-    
+
     new RGBELoader()
-      .setPath("/hdr/") // folder where your .hdr lives
-      .load("simple-light.hdr", (hdrTexture) => {
-        const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
-    
-        scene.environment = envMap; // ✅ PBR lighting
-    
-        hdrTexture.dispose();
-        pmremGenerator.dispose();
-      });
+      .setPath("/hdr/")
+      .load(
+        "simple-light.hdr",
+        (hdrTexture) => {
+          console.log('✅ HDR texture loaded');
+          const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
+
+          scene.environment = envMap;
+
+          hdrTextureRef.current = hdrTexture;
+          envMapRef.current = envMap;
+
+          // Trigger render when HDR loads
+          needsRenderRef.current = true;
+        },
+        undefined,
+        (error) => {
+          console.error("❌ HDR load failed:", error);
+          pmremGenerator.dispose();
+          pmremGeneratorRef.current = null;
+          // Still set render flag so scene displays without HDR
+          needsRenderRef.current = true;
+        }
+      );
 
     // Controls with enhanced zoom range
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 0.5;      // Allow zooming VERY close (was 10)
-    controls.maxDistance = 1000;     // Allow zooming VERY far (was 1000)
-    controls.zoomSpeed = 1.0;        // Slightly faster zoom
-    controls.enablePan = true;       // Enable panning
+    controls.minDistance = 0.5;
+    controls.maxDistance = 1000;
+    controls.zoomSpeed = 1.0;
+    controls.enablePan = true;
     controls.panSpeed = 0.8;
     controlsRef.current = controls;
 
     // Track when user starts interacting
     const onControlStart = () => {
       isUserInteractingRef.current = true;
+      needsRenderRef.current = true;
     };
 
     const onControlEnd = () => {
@@ -139,10 +181,11 @@ export default function ModelViewer() {
     };
 
     // Only clear bubble if user is actively rotating/moving camera
-    // AND enough time has passed since bubble was set (prevents immediate clearing)
     const onControlChange = () => {
+      needsRenderRef.current = true;
+
       const timeSinceBubbleSet = Date.now() - bubbleSetTimeRef.current;
-      
+
       // Only clear if:
       // 1. User is actively dragging/rotating
       // 2. At least 200ms has passed since bubble was set (prevents race condition)
@@ -159,12 +202,15 @@ export default function ModelViewer() {
 
     // Load model
     const loader = new GLTFLoader();
+    console.log('📦 GLTFLoader starting to load model from:', model.uri);
+
     loader.load(
       model.uri,
       (gltf) => {
+        console.log('✅ GLTFLoader model loaded successfully');
         const loadedModel = gltf.scene;
         loadedModel.scale.set(model.scale, model.scale, model.scale);
-        
+
         // Enable shadows and log all mesh names for debugging
         loadedModel.traverse((child) => {
           if (child.isMesh) {
@@ -186,7 +232,7 @@ export default function ModelViewer() {
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
         const distance = maxDim * 2;
-        
+
         camera.position.set(
           distance * 0.7,
           distance * 0.5,
@@ -195,17 +241,25 @@ export default function ModelViewer() {
         camera.lookAt(0, 0, 0);
         controls.target.set(0, 0, 0);
         controls.update();
-        
+
+        // Trigger render to show loaded model
+        needsRenderRef.current = true;
+
         // Mark model as loaded and hide loading screen
         setTimeout(() => {
+          console.log('📍 Model setup complete - hiding loading screen');
           modelLoadedRef.current = true;
+          isLoadingRef.current = false;
+          needsRenderRef.current = true; // Keep rendering after load
           setIsLoading(false);
           console.log('✅ Model fully loaded and ready for interaction');
         }, 500);
       },
       undefined,
       (error) => {
-        console.error('Error loading model:', error);
+        console.error('❌ GLTFLoader failed to load model:', error);
+        console.error('Model URI:', model.uri);
+        needsRenderRef.current = true; // Ensure we render even on error
         setIsLoading(false); // Hide loading screen even on error
       }
     );
@@ -299,35 +353,83 @@ export default function ModelViewer() {
     // Use pointerdown to ensure clean click detection
     renderer.domElement.addEventListener('pointerdown', handleClick);
 
-    // Animation loop
+    // Animation loop with idle optimization
+    let frameCount = 0;
     const animate = () => {
       requestAnimationFrame(animate);
+
       controls.update();
-      renderer.render(scene, camera);
+
+      // Render if:
+      // 1. Something changed (needsRenderRef is true)
+      // 2. OR still loading (isLoadingRef is true)
+      if (needsRenderRef.current || isLoadingRef.current) {
+        frameCount++;
+        if (frameCount <= 3 || frameCount % 30 === 0) {
+          console.log('🎬 Rendering frame', frameCount, '| loading:', isLoadingRef.current, '| needsRender:', needsRenderRef.current);
+        }
+        renderer.render(scene, camera);
+        if (!isLoadingRef.current) {
+          needsRenderRef.current = false; // Only reset if not loading
+        }
+      }
     };
     animate();
 
-    // Handle resize
+    // Handle resize with debouncing to prevent excessive updates
     const handleResize = () => {
       if (!containerRef.current) return;
-      const width = containerRef.current.clientWidth;
-      const height = containerRef.current.clientHeight;
-      
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
+
+      clearTimeout(resizeTimeoutRef.current);
+      resizeTimeoutRef.current = setTimeout(() => {
+        const width = containerRef.current.clientWidth;
+        const height = containerRef.current.clientHeight;
+
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+
+        // Update pixel ratio on resize (e.g., window moved to high-DPI monitor)
+        const newPixelRatio = Math.min(window.devicePixelRatio, maxPixelRatio);
+        renderer.setPixelRatio(newPixelRatio);
+
+        needsRenderRef.current = true;
+      }, 250); // 250ms debounce
     };
     window.addEventListener('resize', handleResize);
 
     // Cleanup
     return () => {
+      clearTimeout(resizeTimeoutRef.current);
       window.removeEventListener('resize', handleResize);
       renderer.domElement.removeEventListener('pointerdown', handleClick);
       controls.removeEventListener('start', onControlStart);
       controls.removeEventListener('end', onControlEnd);
       controls.removeEventListener('change', onControlChange);
+
+      // Dispose GLTF model and all its resources
+      if (modelRef.current) {
+        modelRef.current.traverse((child) => {
+          if (child.geometry) {
+            child.geometry.dispose();
+          }
+          if (child.material) {
+            disposeMaterial(child.material);
+          }
+        });
+        scene.remove(modelRef.current);
+      }
+
+      // Dispose HDR/PMREM resources
+      hdrTextureRef.current?.dispose();
+      envMapRef.current?.dispose();
+      pmremGeneratorRef.current?.dispose();
+
+      // Dispose controls and renderer
       controls.dispose();
       renderer.dispose();
+
+      // Remove DOM element
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
