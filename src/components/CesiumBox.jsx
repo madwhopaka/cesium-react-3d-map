@@ -12,6 +12,7 @@ import {
   CESIUM_CONFIG,
   MODEL_CONFIG,
   BLIP_CONFIG,
+  getVisibilityThreshold,
 } from "../constants/config";
 import { normalizeNodeName } from "../helpers/helper";
 import PartBubble from "./Cesium/PartsModal";
@@ -19,6 +20,14 @@ import PartBubble from "./Cesium/PartsModal";
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
 export default function CesiumMap() {
+  const BLIP_TIP_OFFSET_METERS = 0;
+  const BLIP_HEIGHT_RATIO = 0.82;
+  const BLIP_PIXEL_OFFSET_Y = -10;
+  const FLY_TO_ABOVE_TIP_METERS = 1;
+  const FLY_TO_TARGET_HEIGHT_RATIO = 0.6;
+  const FLY_TO_HEADING_DEG = 35;
+  const FLY_TO_PITCH_DEG = -25;
+
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
@@ -112,8 +121,8 @@ export default function CesiumMap() {
         img.onload = () => {
           skyboxImagesLoaded++;
           if (skyboxImagesLoaded === totalSkyboxImages) {
-            skyboxLoadedRef.current = true;
             console.log('✅ Skybox loaded');
+            skyboxLoadedRef.current = true;
           }
         };
         img.src = src;
@@ -158,11 +167,11 @@ export default function CesiumMap() {
           model.altitude
         );
 
-        // Position at the tip of the tower
+        // Position at the tip of the tower (+3m for visual separation)
         const tipPos = Cesium.Cartesian3.fromDegrees(
           model.lon,
           model.lat,
-          model.altitude + model.towerHeight // At tower tip
+          model.altitude + model.towerHeight
         );
 
         const entity = viewer.entities.add({
@@ -186,7 +195,10 @@ export default function CesiumMap() {
           billboard: {
             image: BLIP_CONFIG.imageUrl,
             scale: BLIP_CONFIG.scale,
-            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            pixelOffset: new Cesium.Cartesian2(0, BLIP_PIXEL_OFFSET_Y),
+            // Keep marker visible even when model/buildings are between camera and blip.
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
           },
         });
 
@@ -199,6 +211,8 @@ export default function CesiumMap() {
             pixelOffset: new Cesium.Cartesian2(0, BLIP_CONFIG.labelOffset),
             showBackground: true,
             backgroundColor: Cesium.Color.BLACK.withAlpha(0.7),
+            // Keep label visible even when geometry is in front.
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
           },
         });
       });
@@ -213,10 +227,11 @@ export default function CesiumMap() {
           first.lon,
           first.lat,
           CESIUM_CONFIG.INITIAL_ALTITUDE
+
         ),
         orientation: { 
           heading: Cesium.Math.toRadians(0),
-          pitch: Cesium.Math.toRadians(-90), // Looking straight down
+          pitch: Cesium.Math.toRadians(-90), // Globe view from above
           roll: 0.0
         },
       });
@@ -234,7 +249,17 @@ export default function CesiumMap() {
         
         MODELS.forEach((model) => {
           const entity = entityMapRef.current[model.id];
+          const blip = blipMapRef.current[model.id];
+          const label = labelMapRef.current[model.id];
           if (!entity) return;
+
+          if (blip) {
+            blip.show = true;
+          }
+
+          if (label) {
+            label.show = true;
+          }
 
           const modelPos = Cesium.Cartesian3.fromDegrees(
             model.lon,
@@ -242,7 +267,10 @@ export default function CesiumMap() {
             model.altitude
           );
           const distance = Cesium.Cartesian3.distance(cameraPos, modelPos);
-          const threshold = model.towerHeight * 8;
+          const threshold = Math.max(
+            getVisibilityThreshold(model),
+            model.towerHeight + FLY_TO_ABOVE_TIP_METERS + 50
+          );
 
           // Track closest model
           if (distance < closestDistance) {
@@ -251,7 +279,7 @@ export default function CesiumMap() {
           }
 
           // Only toggle the 3D model visibility
-          if (distance < threshold * 1.2) {
+          if (distance < threshold * 1.2) { 
             entity.show = true;
           } else {
             entity.show = false;
@@ -259,9 +287,11 @@ export default function CesiumMap() {
         });
         
         // Smart button visibility logic
-        const BUTTON_SHOW_THRESHOLD = 50000; // Show button if within 50km of any model
-        const BUTTON_HIDE_THRESHOLD = 100000; // Hide button if farther than 100km
-        
+        // const BUTTON_SHOW_THRESHOLD = 1000; // Show button if within 50km of any model
+        // const BUTTON_HIDE_THRESHOLD = 2000; // Hide button if farther than 100km
+          const BUTTON_SHOW_THRESHOLD = 50000; // Show button if within 50km of any model
+        const BUTTON_HIDE_THRESHOLD = 100000;
+
         if (closestDistance < BUTTON_SHOW_THRESHOLD) {
           // Close to a model - show button and update reference
           activeModelRef.current = closestModel;
@@ -430,8 +460,6 @@ const flyToModel = (modelId) => {
     const entity = entityMapRef.current[modelId];
     const model = MODEL_LOOKUP[modelId];
     if (!viewer || !entity || !model) return;
-
-    console.log(`✈️ Flying to: ${model.name}`);
     
     // Show loader
     setIsLoading3D(true);
@@ -445,9 +473,10 @@ const flyToModel = (modelId) => {
     activeModelRef.current = model;
     isFlyingRef.current = true;
     
-    // Calculate viewing parameters
-    const distance = model.towerHeight * 2.5; // 2.5x tower height
-    const targetHeight = model.altitude + (model.towerHeight * 0.5); // Middle of tower
+    // Target upper-mid tower so the whole structure remains visible in frame.
+    const targetHeight =
+      model.altitude + model.towerHeight * FLY_TO_TARGET_HEIGHT_RATIO;
+    const distance = Math.max(model.towerHeight+model.altitude, 90);
     
     // Target point
     const target = Cesium.Cartesian3.fromDegrees(
@@ -456,56 +485,24 @@ const flyToModel = (modelId) => {
       targetHeight
     );
     
-    // Create transform at target
-    const transform = Cesium.Transforms.eastNorthUpToFixedFrame(target);
-    
-    // Camera offset in local coordinates (northeast, slightly elevated)
-    const cameraOffset = new Cesium.Cartesian3(
-      distance * 0.707,  // East (45° = cos/sin ≈ 0.707)
-      distance * 0.707,  // North
-      distance * 0.5     // Up (for -30° pitch)
+    const offset = new Cesium.HeadingPitchRange(
+      Cesium.Math.toRadians(FLY_TO_HEADING_DEG),
+      Cesium.Math.toRadians(FLY_TO_PITCH_DEG),
+      distance
     );
-    
-    // Transform to world coordinates
-    const cameraPosition = Cesium.Matrix4.multiplyByPoint(
-      transform,
-      cameraOffset,
-      new Cesium.Cartesian3()
-    );
-    
-    // Fly to position
-    viewer.camera.flyTo({
-      destination: cameraPosition,
-      orientation: {
-        heading: Cesium.Math.toRadians(45),
-        pitch: Cesium.Math.toRadians(-30),
-        roll: 0.0
-      },
+
+    viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(target, 1), {
+      offset,
       duration: 2.5,
       complete: () => {
-        // Lock camera to prevent auto-adjustment
-        const finalHeading = Cesium.Math.toRadians(45);
-        const finalPitch = Cesium.Math.toRadians(-30);
-        
-        viewer.camera.lookAt(
-          target,
-          new Cesium.HeadingPitchRange(finalHeading, finalPitch, distance)
-        );
-        
-        // Then unlock it and re-enable camera listener
-        setTimeout(() => {
-          viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-          
-          // RE-ADD camera listener after flyTo completes
-          if (viewer.cameraChangeListener) {
-            viewer.camera.changed.addEventListener(viewer.cameraChangeListener);
-            viewer.cameraChangeListener(); // Run once to update visibility and button
-          }
-          
-          setIsLoading3D(false);
-          isFlyingRef.current = false;
-          console.log(`✅ Arrived at ${model.name}`);
-        }, 3000);
+        if (viewer.cameraChangeListener) {
+          viewer.camera.changed.addEventListener(viewer.cameraChangeListener);
+          viewer.cameraChangeListener();
+        }
+
+        setIsLoading3D(false);
+        isFlyingRef.current = false;
+        console.log(`✅ Arrived at ${model.name}`);
       },
     });
     

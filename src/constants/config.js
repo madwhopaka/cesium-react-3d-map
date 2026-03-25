@@ -5,11 +5,12 @@ export const CESIUM_CONFIG = {
 
 export const CAMERA_CONFIG = {
   VISIBILITY_MULTIPLIER: 8,
+  MIN_VISIBILITY_DISTANCE: 3000,
 };
 
 export const MODEL_CONFIG = {
-  minimumPixelSize: 96,
-  maximumScale: 300,
+  minimumPixelSize: 8,
+  maximumScale: 30,
 };
 
 export const BLIP_CONFIG = {
@@ -20,5 +21,8 @@ export const BLIP_CONFIG = {
 };
 
 export function getVisibilityThreshold(model) {
-  return model.towerHeight * 8;
+  return Math.max(
+    model.towerHeight * CAMERA_CONFIG.VISIBILITY_MULTIPLIER,
+    CAMERA_CONFIG.MIN_VISIBILITY_DISTANCE
+  );
 }

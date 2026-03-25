@@ -10,12 +10,7 @@
 export const normalizeNodeName = (nodeName) => {
   if (!nodeName) return null;
 
-  return nodeName
-    .toLowerCase()
-    .replace(/[0-9]+_0$/, "")
-    .replace(/[0-9]+$/, "")
-    .replace(/__+/g, "_")
-    .replace(/_+$/, "");
+  return nodeName.toLowerCase().trim().replace(/_\d+$/, "");
 };
 
 /**

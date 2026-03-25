@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MODEL_LOOKUP } from "../constants/models";
@@ -159,6 +160,10 @@ export default function ModelViewer() {
 
     // Load model
     const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.7/");
+    loader.setDRACOLoader(dracoLoader);
+
     loader.load(
       model.uri,
       (gltf) => {
@@ -327,6 +332,7 @@ export default function ModelViewer() {
       controls.removeEventListener('end', onControlEnd);
       controls.removeEventListener('change', onControlChange);
       controls.dispose();
+      dracoLoader.dispose();
       renderer.dispose();
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
