@@ -135,7 +135,7 @@ export const MODELS = [
     lat: 43.061949,
     altitude: 129.18,
     towerHeight: 36,
-    scale: 3,
+    scale: 2.2,
     uri: "/models/SITX024649.glb",
     towerSpecs: {
       type: "Monopole",
