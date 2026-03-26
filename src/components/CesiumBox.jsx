@@ -96,6 +96,7 @@ export default function CesiumMap() {
     const init = async () => {
       viewer = new Cesium.Viewer(containerRef.current, {
         terrain: Cesium.Terrain.fromWorldTerrain(),
+        creditContainer: document.createElement("div"),
         homeButton: false,
         sceneModePicker: false,
         timeline: false,
@@ -689,7 +690,20 @@ useEffect(() => {
         onSelectModel={flyToModel}
       />
 
-      <div ref={containerRef} style={{ position: "fixed", inset: 0 }} />
+      <div
+        ref={containerRef}
+        style={{
+          position: "fixed",
+          top: isOverviewOpen ? 12 : 0,
+          left: isOverviewOpen ? sidebarWidth + 12 : sidebarWidth,
+          right: isOverviewOpen ? 12 : 0,
+          bottom: isOverviewOpen ? "calc(50vh + 8px)" : 0,
+          border: isOverviewOpen ? "1px solid rgba(255,255,255,0.12)" : "none",
+          borderRadius: isOverviewOpen ? 18 : 0,
+          boxSizing: "border-box",
+          overflow: "hidden",
+        }}
+      />
 
       <PartBubble
         bubble={partBubble}
@@ -707,11 +721,12 @@ useEffect(() => {
         <section
           style={{
             position: "fixed",
-            left: sidebarWidth + 16,
-            right: 16,
-            bottom: 16,
+            left: sidebarWidth,
+            right: 0,
+            top: "50vh",
+            bottom: 0,
             zIndex: 18,
-            borderRadius: 24,
+            borderRadius: 0,
             background: "#1F1C1C",
             border: "1px solid rgba(255,255,255,0.06)",
             boxShadow: "0 20px 50px rgba(0,0,0,0.28)",
@@ -719,38 +734,34 @@ useEffect(() => {
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
-            maxHeight: "48vh",
-            minHeight: 380,
+            minHeight: 0,
           }}
         >
           <div
             style={{
-              padding: "18px 22px",
+              padding: "12px 16px",
               borderBottom: "1px solid rgba(255,255,255,0.06)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 16,
+              gap: 12,
             }}
           >
             <div>
-              <div style={{ color: "#b0a7a7", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em" }}>
-                Tower Overview
-              </div>
-              <h2 style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.2 }}>Tower overview</h2>
+              <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2 }}>Tower overview</h2>
             </div>
 
             <button
               type="button"
-              onClick={() => navigate("/", { replace: true })}
+              onClick={() => navigate("/map", { replace: true })}
               style={{
                 border: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.03)",
                 color: "#f5f5f5",
                 borderRadius: 999,
-                padding: "10px 14px",
+                padding: "8px 12px",
                 cursor: "pointer",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 700,
               }}
             >
@@ -760,10 +771,10 @@ useEffect(() => {
 
           <div
             style={{
-              padding: "16px 22px 0",
+              padding: "10px 16px 0",
               display: "flex",
               alignItems: "center",
-              gap: 12,
+              gap: 10,
               flexWrap: "wrap",
             }}
           >
@@ -772,9 +783,9 @@ useEffect(() => {
                 flex: "1 1 280px",
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                padding: "12px 14px",
-                borderRadius: 16,
+                gap: 8,
+                padding: "10px 12px",
+                borderRadius: 12,
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.06)",
               }}
@@ -801,13 +812,13 @@ useEffect(() => {
               type="button"
               onClick={() => setOverviewSearch("")}
               style={{
-                padding: "12px 16px",
+                padding: "10px 14px",
                 borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.03)",
                 color: "#f5f5f5",
                 cursor: "pointer",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 700,
               }}
             >
