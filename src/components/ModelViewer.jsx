@@ -52,7 +52,7 @@ export default function ModelViewer() {
     if (!model) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#bdbdbd');
+      scene.background = new THREE.Color('#1F1C1C');
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
@@ -264,8 +264,8 @@ export default function ModelViewer() {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#bdc2c6ff',
-        color: '#111827',
+          backgroundColor: '#2f2f2f',
+        color: '#f5f5f5',
         flexDirection: 'column',
         gap: '20px'
       }}>
@@ -274,8 +274,8 @@ export default function ModelViewer() {
           to="/" 
           style={{
             padding: '12px 24px',
-            backgroundColor: '#f5f5f5',
-            color: '#050505',
+            backgroundColor: '#444444',
+            color: '#f5f5f5',
             textDecoration: 'none',
             borderRadius: '8px'
           }}
@@ -287,13 +287,13 @@ export default function ModelViewer() {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: '#f5f5f5', color: '#2f2f2f', fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: '#2f2f2f', color: '#f5f5f5', fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif' }}>
       {/* Loading Screen */}
       {isLoading && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(230, 232, 234, 0.95)',
+          backgroundColor: 'rgba(47, 47, 47, 0.96)',
           backdropFilter: 'blur(10px)',
           display: 'flex',
           flexDirection: 'column',
@@ -305,17 +305,17 @@ export default function ModelViewer() {
           <div style={{
             width: '60px',
             height: '60px',
-            border: '4px solid #d1d5db',
-            borderTop: '4px solid #374151',
+            border: '4px solid #454545',
+            borderTop: '4px solid #8a8a8a',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }} />
           <div style={{
             fontSize: '18px',
             fontWeight: '600',
-            color: '#2f2f2f',
+            color: '#f5f5f5',
           }}>
-            Loading 3D Model...
+            Loading 3D Model…
           </div>
           <style>
             {`
@@ -337,15 +337,15 @@ export default function ModelViewer() {
             left: '20px',
             zIndex: 1000,
             padding: '12px 24px',
-            backgroundColor: 'rgba(255, 255, 255, 0.96)',
-            color: '#2f2f2f',
+            backgroundColor: 'rgba(47, 47, 47, 0.96)',
+            color: '#f5f5f5',
             textDecoration: 'none',
             borderRadius: '8px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.24)',
             fontSize: '14px',
             fontWeight: '500',
             backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(17,24,39,0.08)',
+            border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
           ← Back to Map
@@ -359,12 +359,12 @@ export default function ModelViewer() {
           right: '20px',
           zIndex: 1000,
           padding: '8px 12px',
-          backgroundColor: 'rgba(255, 255, 255, 0.96)',
-          color: '#2f2f2f',
+          backgroundColor: 'rgba(47, 47, 47, 0.96)',
+          color: '#f5f5f5',
           borderRadius: '6px',
-          boxShadow: '0 10px 22px rgba(0,0,0,0.12)',
+          boxShadow: '0 10px 22px rgba(0,0,0,0.24)',
           backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(17,24,39,0.08)',
+          border: '1px solid rgba(255,255,255,0.06)',
         }}
       >
         <h2 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '600' }}>{model.name}</h2>
@@ -382,6 +382,7 @@ export default function ModelViewer() {
       <TowerBubble
         tower={model}
         visible={isTowerBubbleVisible && !isLoading}
+        showModelViewerLink={false}
       />
 
       <PartBubble

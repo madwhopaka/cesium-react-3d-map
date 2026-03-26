@@ -59,7 +59,7 @@ export default function CesiumMap() {
   const [showMiniViewer, setShowMiniViewer] = useState(false); // Mini viewer modal state
   const [overviewSearch, setOverviewSearch] = useState("");
   const cloudLayerRef = useRef(null); // Track cloud layer entity
-  const sidebarWidth = panelOpen ? 324 : 76;
+  const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
     return new URLSearchParams(location.search).get("overview") === "1";
@@ -700,6 +700,7 @@ useEffect(() => {
       <TowerBubble
         tower={towerBubble}
         visible={Boolean(towerBubble)}
+        onOpenInWindow={() => setShowMiniViewer(true)}
       />
 
       {isOverviewOpen && (
@@ -711,9 +712,9 @@ useEffect(() => {
             bottom: 16,
             zIndex: 18,
             borderRadius: 24,
-            background: "rgba(10, 10, 10, 0.96)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.42)",
+            background: "#1F1C1C",
+            border: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.28)",
             backdropFilter: "blur(16px)",
             overflow: "hidden",
             display: "flex",
@@ -725,7 +726,7 @@ useEffect(() => {
           <div
             style={{
               padding: "18px 22px",
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -733,7 +734,7 @@ useEffect(() => {
             }}
           >
             <div>
-              <div style={{ color: "#a1a1a1", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em" }}>
+              <div style={{ color: "#b0a7a7", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em" }}>
                 Tower Overview
               </div>
               <h2 style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.2 }}>Tower overview</h2>
@@ -743,8 +744,8 @@ useEffect(() => {
               type="button"
               onClick={() => navigate("/", { replace: true })}
               style={{
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                background: "rgba(255,255,255,0.03)",
                 color: "#f5f5f5",
                 borderRadius: 999,
                 padding: "10px 14px",
@@ -774,11 +775,11 @@ useEffect(() => {
                 gap: 10,
                 padding: "12px 14px",
                 borderRadius: 16,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
               }}
             >
-              <span style={{ color: "#a1a1a1", fontSize: 13 }}>Search</span>
+              <span style={{ color: "#b0a7a7", fontSize: 13 }}>Search</span>
               <input
                 type="text"
                 value={overviewSearch}
@@ -802,8 +803,8 @@ useEffect(() => {
               style={{
                 padding: "12px 16px",
                 borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                background: "rgba(255,255,255,0.03)",
                 color: "#f5f5f5",
                 cursor: "pointer",
                 fontSize: 13,
@@ -813,7 +814,7 @@ useEffect(() => {
               Clear
             </button>
 
-            <div style={{ color: "#9a9a9a", fontSize: 13 }}>
+            <div style={{ color: "#b0a7a7", fontSize: 13 }}>
               {filteredOverviewRows.length} towers
             </div>
           </div>
@@ -838,8 +839,8 @@ useEffect(() => {
                         fontSize: 11,
                         textTransform: "uppercase",
                         letterSpacing: "0.12em",
-                        color: "#9a9a9a",
-                        borderBottom: "1px solid rgba(255,255,255,0.08)",
+                        color: "#b0a7a7",
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
                       }}
                     >
                       {heading}
@@ -852,10 +853,10 @@ useEffect(() => {
                   const isOffline = String(row.status).toLowerCase().includes("offline");
                   const isMaintenance = String(row.status).toLowerCase().includes("maintenance");
                   const tone = isOffline
-                    ? { bg: "rgba(255, 210, 120, 0.16)", fg: "#f7c76e" }
+                    ? { bg: "rgba(255, 210, 120, 0.12)", fg: "#f7c76e" }
                     : isMaintenance
-                    ? { bg: "rgba(255, 255, 255, 0.1)", fg: "#f5f5f5" }
-                    : { bg: "rgba(255,255,255,0.08)", fg: "#d9d9d9" };
+                    ? { bg: "rgba(255, 255, 255, 0.06)", fg: "#f5f5f5" }
+                    : { bg: "rgba(255,255,255,0.05)", fg: "#d9d9d9" };
 
                   return (
                     <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -922,44 +923,6 @@ useEffect(() => {
             </table>
           </div>
         </section>
-      )}
-
-      {/* Floating View 3D Model Button */}
-      {showViewModelButton && activeModelRef.current && (
-        <button
-          onClick={() => setShowMiniViewer(true)}
-          style={{
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            padding: '14px 24px',
-            background: 'rgba(10, 10, 10, 0.92)',
-            color: '#f5f5f5',
-            textDecoration: 'none',
-            borderRadius: '12px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
-            zIndex: 1000,
-            fontSize: '14px',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.transform = 'translateY(-2px)';
-            e.target.style.boxShadow = '0 14px 34px rgba(0,0,0,0.42)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = '0 10px 30px rgba(0,0,0,0.35)';
-          }}
-        >
-          🔍 View 3D Model
-        </button>
       )}
 
       {/* Mini Viewer Modal */}

@@ -55,10 +55,10 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           width: 320,
           maxHeight: 400,
           padding: "10px",
-          background: "rgba(255, 255, 255, 0.98)",
+          background: "#ffffff",
           backdropFilter: "blur(12px)",
           borderRadius: "22px",
-          color: "#2f2f2f",
+          color: "#4a4a4a",
           boxShadow: "0 16px 44px rgba(0,0,0,0.16)",
           zIndex: 1000,
           animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
@@ -81,11 +81,11 @@ export default function PartBubble({ bubble, anchor, onClose }) {
             borderLeft:
               tailHorizontal === "left"
                 ? "none"
-                : "12px solid rgba(255,255,255,0.98)",
+                : "12px solid #ffffff",
             borderRight:
               tailHorizontal === "right"
                 ? "none"
-                : "12px solid rgba(255,255,255,0.98)",
+                : "12px solid #ffffff",
           }}
         />
 
@@ -106,7 +106,7 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           {/* Title line */}
           <div style={{ marginBottom: 12 }}>
             <span style={{ fontSize: 18 }}>{bubble.icon}</span>{" "}
-            <strong style={{ fontSize: 15, color: "#2f2f2f" }}>{bubble.label}</strong>
+            <strong style={{ fontSize: 15, color: "#4a4a4a" }}>{bubble.label}</strong>
           </div>
 
           {/* Manufacturer */}
@@ -182,12 +182,12 @@ export default function PartBubble({ bubble, anchor, onClose }) {
         }
 
         div::-webkit-scrollbar-thumb {
-          background: rgba(156, 163, 175, 0.5);
+          background: rgba(107, 114, 128, 0.5);
           border-radius: 3px;
         }
 
         div::-webkit-scrollbar-thumb:hover {
-          background: rgba(156, 163, 175, 0.7);
+          background: rgba(107, 114, 128, 0.7);
         }
       `}</style>
     </>
@@ -202,7 +202,7 @@ function Paragraph({ children }) {
 
 function Muted({ children }) {
   return (
-    <span style={{ color: "#6b7280", fontWeight: 500 }}>
+    <span style={{ color: "#6d6d6d", fontWeight: 500 }}>
       {children}
     </span>
   );

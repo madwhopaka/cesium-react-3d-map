@@ -25,7 +25,7 @@ export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
           bottom: 0,
           left: leftOffset,
           zIndex: 9999,
-          background: "#000",
+          background: "#1F1C1C",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -37,7 +37,7 @@ export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
           style={{
             width: "80px",
             height: "80px",
-            border: "4px solid #1a1a1a",
+            border: "4px solid #2a2424",
             borderTop: "4px solid #f5f5f5",
             borderRadius: "50%",
             animation: "spin 1s linear infinite",
@@ -47,7 +47,7 @@ export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
 
         <div
           style={{
-            color: "#fff",
+            color: "#f5f5f5",
             fontSize: "24px",
             fontWeight: 600,
             marginBottom: "8px",
@@ -58,7 +58,7 @@ export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
 
         <div
           style={{
-            color: "#888",
+            color: "#b0a7a7",
             fontSize: "14px",
           }}
         >

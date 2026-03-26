@@ -6,7 +6,7 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
   const navItems = [
     { label: "Home", to: "/", icon: "⌂" },
     { label: "Tower Overview", to: "/?overview=1", icon: "▤" },
-    { label: "Tower Details", to: "/tower", icon: "◫" },
+    { label: "Tower Details", to: "/tower", icon: "/images/icon-tower.png" },
   ];
 
   const isHomeActive = location.pathname === "/";
@@ -21,11 +21,11 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
         left: 0,
         bottom: 0,
         zIndex: 20,
-        width: isOpen ? 324 : 76,
-        background: "linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(6,6,6,0.96) 100%)",
+        width: isOpen ? 248 : 68,
+        background: "#1c1b1b",
         color: "#f5f5f5",
-        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
-        boxShadow: "18px 0 60px rgba(0, 0, 0, 0.38)",
+        borderRight: "1px solid rgba(255, 255, 255, 0.06)",
+        boxShadow: "18px 0 60px rgba(0, 0, 0, 0.28)",
         backdropFilter: "blur(16px)",
         overflow: "hidden",
         transition:
@@ -38,7 +38,7 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
       <div
         style={{
           padding: isOpen ? "18px 18px 16px" : "18px 12px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
           display: "flex",
           alignItems: "center",
           justifyContent: isOpen ? "space-between" : "center",
@@ -47,34 +47,31 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
       >
         {isOpen ? (
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-            <div
+            <img
+              src="/images/PointAI.png"
+              alt="PointAI"
               style={{
                 width: 40,
                 height: 40,
                 borderRadius: 14,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "linear-gradient(180deg, #ffffff 0%, #cfcfcf 100%)",
-                color: "#0a0a0a",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)",
+                objectFit: "cover",
                 flexShrink: 0,
-                fontSize: 18,
+                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
               }}
-            >
-              🗼
-            </div>
+            />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.2, lineHeight: 1.2 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.2, lineHeight: 1.2, color: "#f5f5f5" }}>
                 Quick Menu
               </div>
-              <div style={{ fontSize: 12, color: "#a1a1a1", marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "#b0a7a7", marginTop: 4 }}>
                 Search and jump between towers
               </div>
             </div>
           </div>
         ) : (
-          <div
+          <button
+            type="button"
+            onClick={onToggle}
             style={{
               width: 40,
               height: 40,
@@ -82,44 +79,58 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "linear-gradient(180deg, #ffffff 0%, #cfcfcf 100%)",
-              color: "#0a0a0a",
-              fontSize: 18,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              flexShrink: 0,
             }}
           >
-            🗼
-          </div>
+            <img
+              src="/images/PointAI.png"
+              alt="PointAI"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                objectFit: "cover",
+                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
+              }}
+            />
+          </button>
         )}
 
-        <button
-          onClick={onToggle}
-          aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 12,
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            background: "rgba(255, 255, 255, 0.04)",
-            color: "#e5e5e5",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 14,
-            transition: "background 180ms ease, transform 180ms ease",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-            e.currentTarget.style.transform = "translateY(-1px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-        >
-          {isOpen ? "⟨" : "⟩"}
-        </button>
+          {isOpen && (
+            <button
+              onClick={onToggle}
+              aria-label="Collapse sidebar"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                background: "rgba(255, 255, 255, 0.03)",
+                color: "#f5f5f5",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14,
+                transition: "background 180ms ease, transform 180ms ease",
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              ⟨
+            </button>
+          )}
       </div>
 
       {isOpen && (
@@ -144,14 +155,10 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
                       padding: "12px 14px",
                       borderRadius: 16,
                       textDecoration: "none",
-                      color: isActive ? "#050505" : "#f5f5f5",
-                      background: isActive
-                        ? "linear-gradient(180deg, #f5f5f5 0%, #d9d9d9 100%)"
-                        : "rgba(255,255,255,0.04)",
-                      border: isActive
-                        ? "1px solid rgba(255,255,255,0.7)"
-                        : "1px solid rgba(255,255,255,0.08)",
-                      boxShadow: isActive ? "0 14px 26px rgba(0,0,0,0.32)" : "none",
+                      color: isActive ? "#ffffff" : "#b0a7a7",
+                      background: isActive ? "#2a2424" : "transparent",
+                      border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
+                      boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
                       transition: "transform 180ms ease, background 180ms ease",
                       cursor: "pointer",
                       width: "100%",
@@ -183,14 +190,10 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
                       padding: "12px 14px",
                       borderRadius: 16,
                       textDecoration: "none",
-                      color: isActive ? "#050505" : "#f5f5f5",
-                      background: isActive
-                        ? "linear-gradient(180deg, #f5f5f5 0%, #d9d9d9 100%)"
-                        : "rgba(255,255,255,0.04)",
-                      border: isActive
-                        ? "1px solid rgba(255,255,255,0.7)"
-                        : "1px solid rgba(255,255,255,0.08)",
-                      boxShadow: isActive ? "0 14px 26px rgba(0,0,0,0.32)" : "none",
+                      color: isActive ? "#ffffff" : "#b0a7a7",
+                      background: isActive ? "#2a2424" : "transparent",
+                      border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
+                      boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
                       transition: "transform 180ms ease, background 180ms ease",
                       cursor: "pointer",
                       width: "100%",
@@ -220,14 +223,10 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
                     padding: "12px 14px",
                     borderRadius: 16,
                     textDecoration: "none",
-                    color: isActive ? "#050505" : "#f5f5f5",
-                    background: isActive
-                      ? "linear-gradient(180deg, #f5f5f5 0%, #d9d9d9 100%)"
-                      : "rgba(255,255,255,0.04)",
-                    border: isActive
-                      ? "1px solid rgba(255,255,255,0.7)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: isActive ? "0 14px 26px rgba(0,0,0,0.32)" : "none",
+                    color: isActive ? "#ffffff" : "#b0a7a7",
+                    background: isActive ? "#2a2424" : "transparent",
+                    border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
+                    boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
                     transition: "transform 180ms ease, background 180ms ease",
                   }}
                   onMouseEnter={(e) => {
@@ -237,7 +236,15 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
                     e.currentTarget.style.transform = "translateX(0)";
                   }}
                 >
-                  <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
+                  {item.icon.startsWith("/images/") ? (
+                    <img
+                      src={item.icon}
+                      alt={item.label}
+                      style={{ width: 18, height: 18, objectFit: "contain", flexShrink: 0 }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
+                  )}
                   <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>
                 </Link>
               );
@@ -249,21 +256,21 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
               marginTop: 4,
               padding: 14,
               borderRadius: 18,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "#241f1f",
+              border: "1px solid rgba(255,255,255,0.05)",
             }}
           >
-            <div style={{ color: "#a1a1a1", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+            <div style={{ color: "#b0a7a7", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em" }}>
               Tower Details
             </div>
             <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: "#f5f5f5" }}>
               Browse tower metrics, search the list, and open the map or 3D viewer.
             </div>
             <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.08)", fontSize: 11 }}>
+              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.05)", fontSize: 11 }}>
                 {models?.length ?? 0} towers
               </span>
-              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.08)", fontSize: 11 }}>
+              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.05)", fontSize: 11 }}>
                 Black &amp; white
               </span>
             </div>
@@ -272,14 +279,63 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
       )}
 
       {!isOpen && (
-        <div style={{ padding: "18px 12px", display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
-          <div style={{ color: "#a1a1a1", fontSize: 11, writingMode: "vertical-rl", transform: "rotate(180deg)", letterSpacing: "0.14em" }}>
-            TOWERS
-          </div>
-          <div style={{ width: 32, height: 1, background: "rgba(255,255,255,0.12)" }} />
-          <div style={{ color: "#f5f5f5", fontSize: 12, fontWeight: 700 }}>{models.length}</div>
+        <div style={{ padding: "14px 10px", display: "flex", flexDirection: "column", gap: 10, alignItems: "center", flex: 1 }}>
+          {navItems.map((item) => {
+            const isActive =
+              (item.to === "/" && isHomeActive && new URLSearchParams(location.search).get("overview") !== "1") ||
+              (item.to === "/?overview=1" && isTowersActive) ||
+              (item.to === "/tower" && isTowerDetailsActive);
+
+            const IconContent = item.icon.startsWith("/images/") ? (
+              <img
+                src={item.icon}
+                alt={item.label}
+                style={{ width: 18, height: 18, objectFit: "contain" }}
+              />
+            ) : (
+              <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
+            );
+
+            const commonStyle = {
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: isActive ? "#2a2424" : "transparent",
+              border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
+              color: "#f5f5f5",
+              cursor: "pointer",
+              padding: 0,
+              boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
+            };
+
+            if (item.to === "/" && onHome) {
+              return (
+                <button key={item.label} type="button" onClick={onHome} title={item.label} aria-label={item.label} style={commonStyle}>
+                  {IconContent}
+                </button>
+              );
+            }
+
+            if (item.to === "/?overview=1" && onOverview) {
+              return (
+                <button key={item.label} type="button" onClick={onOverview} title={item.label} aria-label={item.label} style={commonStyle}>
+                  {IconContent}
+                </button>
+              );
+            }
+
+            return (
+              <Link key={item.label} to={item.to} title={item.label} aria-label={item.label} style={commonStyle}>
+                {IconContent}
+              </Link>
+            );
+          })}
         </div>
       )}
+
     </aside>
   );
 }

@@ -791,7 +791,7 @@ export const MODELS = [
     name: "Tower 78266, Ground-Based Lattice Tower (3-Legged Hybrid)",
     lon: 139.584000,
     lat: 35.915467,
-    altitude: 55.00,
+    altitude: 53.99,
     towerHeight: 50,
     scale: 2,
     uri: "/models/78266.glb",

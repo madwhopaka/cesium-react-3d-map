@@ -75,7 +75,7 @@ export default function TowersPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#050505",
+        background: "#1F1C1C",
         color: "#f5f5f5",
       }}
     >
@@ -88,7 +88,7 @@ export default function TowersPage() {
 
       <main
         style={{
-          paddingLeft: sidebarOpen ? 340 : 92,
+          paddingLeft: sidebarOpen ? 264 : 84,
           paddingRight: 24,
           paddingTop: 24,
           paddingBottom: 24,
@@ -112,20 +112,20 @@ export default function TowersPage() {
               gap: 16,
               padding: "20px 22px",
               borderRadius: 24,
-              background: "linear-gradient(180deg, rgba(35,31,31,0.96) 0%, rgba(25,22,22,0.98) 100%)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
+              background: "#1F1C1C",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
               backdropFilter: "blur(12px)",
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ color: "#a1a1a1", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.14em" }}>
+              <div style={{ color: "#b0a7a7", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.14em" }}>
                 Tower Details
               </div>
               <h1 style={{ margin: "8px 0 8px", fontSize: 28, lineHeight: 1.1, textWrap: "balance" }}>
                 Tower Details
               </h1>
-              <p style={{ margin: 0, color: "#bdbdbd", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
+              <p style={{ margin: 0, color: "#c7bcbc", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
                 Inspect tower-level details, maintenance status, and navigation actions from one place.
               </p>
             </div>
@@ -135,16 +135,16 @@ export default function TowersPage() {
                 style={{
                   padding: "10px 14px",
                   borderRadius: 14,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
-                  color: "#d9d9d9",
+                  color: "#d9d0d0",
                   fontSize: 13,
                 }}
               >
-                <span style={{ color: "#9a9a9a", fontSize: 12 }}>Filters</span>
+                <span style={{ color: "#b0a7a7", fontSize: 12 }}>Filters</span>
                 <select
                   value={filterValue}
                   onChange={(event) => setFilterValue(event.target.value)}
@@ -164,7 +164,7 @@ export default function TowersPage() {
                   <option value="Offline">Offline</option>
                   <option value="Maintenance due">Maintenance due</option>
                 </select>
-                <span style={{ color: "#9a9a9a" }}>▾</span>
+                <span style={{ color: "#b0a7a7" }}>▾</span>
               </div>
 
               <button
@@ -173,8 +173,8 @@ export default function TowersPage() {
                 style={{
                   padding: "10px 16px",
                   borderRadius: 999,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
                   color: "#f5f5f5",
                   cursor: "pointer",
                   fontSize: 13,
@@ -188,10 +188,10 @@ export default function TowersPage() {
                 style={{
                   padding: "12px 16px",
                   borderRadius: 14,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
                   fontSize: 13,
-                  color: "#d9d9d9",
+                  color: "#d9d0d0",
                 }}
               >
                 {filteredRows.length} records
@@ -203,9 +203,9 @@ export default function TowersPage() {
             style={{
               padding: 18,
               borderRadius: 24,
-              background: "rgba(32,28,28,0.98)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
+              background: "#1F1C1C",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
             }}
           >
             <div id="tower-details" style={{ overflowX: "auto" }}>
@@ -236,8 +236,8 @@ export default function TowersPage() {
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: "0.12em",
-                          color: "#9a9a9a",
-                          borderBottom: "1px solid rgba(255,255,255,0.08)",
+                          color: "#b0a7a7",
+                          borderBottom: "1px solid rgba(255,255,255,0.06)",
                         }}
                       >
                         {heading}
@@ -252,8 +252,8 @@ export default function TowersPage() {
                     return (
                     <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                       <td style={{ padding: "16px 12px", fontSize: 13, fontWeight: 700 }}>{row.model.id}</td>
-                      <td style={{ padding: "16px 12px", fontSize: 13 }}>{row.location}</td>
-                      <td style={{ padding: "16px 12px", fontSize: 13 }}>{row.type}</td>
+                        <td style={{ padding: "16px 12px", fontSize: 13, color: "#d9d0d0" }}>{row.location}</td>
+                      <td style={{ padding: "16px 12px", fontSize: 13, color: "#d9d0d0" }}>{row.type}</td>
                       <td style={{ padding: "16px 12px" }}>
                         <span
                           style={{
@@ -271,8 +271,8 @@ export default function TowersPage() {
                           {row.status}
                         </span>
                       </td>
-                      <td style={{ padding: "16px 12px", fontSize: 13 }}>{row.statusUpdated}</td>
-                      <td style={{ padding: "16px 12px", fontSize: 13 }}>{row.assignedTo}</td>
+                      <td style={{ padding: "16px 12px", fontSize: 13, color: "#d9d0d0" }}>{row.statusUpdated}</td>
+                      <td style={{ padding: "16px 12px", fontSize: 13, color: "#d9d0d0" }}>{row.assignedTo}</td>
                       <td style={{ padding: "16px 12px" }}>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                           <Link
@@ -312,7 +312,7 @@ export default function TowersPage() {
 
                   {filteredRows.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#a1a1a1" }}>
+                      <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#b0a7a7" }}>
                         No towers match your search.
                       </td>
                     </tr>

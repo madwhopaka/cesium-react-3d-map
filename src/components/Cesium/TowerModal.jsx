@@ -1,6 +1,7 @@
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 
-export default function TowerBubble({ tower, visible }) {
+export default function TowerBubble({ tower, visible, onOpenInWindow, showModelViewerLink = true }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const towerDetails = useMemo(() => {
@@ -36,94 +37,146 @@ export default function TowerBubble({ tower, visible }) {
         position: "fixed",
         top: 16,
         right: 16,
-        width: 320,
+        width: 292,
         maxHeight: "calc(100vh - 32px)",
-        padding: "10px",
-          background: "rgba(255, 255, 255, 0.98)",
-          backdropFilter: "blur(12px)",
-        borderRadius: "22px",
-          color: "#2f2f2f",
-          boxShadow: "0 16px 44px rgba(0,0,0,0.16)",
+        padding: 8,
+        background: "#ffffff",
+        backdropFilter: "blur(12px)",
+        borderRadius: 20,
+        color: "#4a4a4a",
+        boxShadow: "0 16px 44px rgba(0,0,0,0.16)",
         zIndex: 1000,
         animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
         pointerEvents: "auto",
-          fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
+        fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
       }}
     >
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "space-between",
-          gap: 12,
-          padding: "10px 10px 12px",
-          borderRadius: "16px",
+          gap: 10,
+          padding: isExpanded ? "10px 10px 12px" : "8px 8px 9px",
+          borderRadius: 14,
         }}
       >
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontSize: isExpanded ? 14 : 13,
+              fontWeight: 700,
+              lineHeight: 1.2,
+              color: "#4a4a4a",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {tower.name}
+          </div>
+
+          <div style={{ marginTop: 2, color: "#6d6d6d", fontSize: isExpanded ? 12 : 11 }}>
+            Maintenance: <span style={{ color: "#4a4a4a", fontWeight: 600 }}>{maintenanceStatus}</span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "nowrap",
+              marginTop: isExpanded ? 8 : 6,
+            }}
+          >
+            {showModelViewerLink && (
+              <Link
+                to={`/model-viewer/${tower.id}`}
+                target="_blank"
+                style={{
+                  color: "#4a4a4a",
+                  textDecoration: "underline",
+                  textUnderlineOffset: 3,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                3D model viewer
+              </Link>
+            )}
+
+            {onOpenInWindow && (
+              <button
+                type="button"
+                onClick={onOpenInWindow}
+                style={{
+                  padding: 0,
+                  border: "none",
+                  background: "transparent",
+                  color: "#4a4a4a",
+                  textDecoration: "underline",
+                  textUnderlineOffset: 3,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                3D in-window
+              </button>
+            )}
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={() => setIsExpanded((value) => !value)}
+          aria-label={isExpanded ? "Collapse tower details" : "Expand tower details"}
           style={{
-            flex: 1,
-            minWidth: 0,
+            flexShrink: 0,
             border: "none",
             background: "transparent",
-            color: "inherit",
+            color: "#4a4a4a",
             cursor: "pointer",
-            textAlign: "left",
             padding: 0,
+            fontSize: isExpanded ? 18 : 16,
+            transition: "transform 220ms ease, opacity 220ms ease",
+            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+            opacity: 0.9,
+            lineHeight: 1,
+            marginTop: 2,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {tower.name}
-              </div>
-              <div style={{ marginTop: 4, color: "#6b7280", fontSize: 12 }}>
-                Maintenance: <span style={{ color: "#2f2f2f", fontWeight: 600 }}>{maintenanceStatus}</span>
-              </div>
-            </div>
-
-            <div
-              style={{
-                color: "#2f2f2f",
-                fontSize: 18,
-                flexShrink: 0,
-                transition: "transform 220ms ease, opacity 220ms ease",
-                transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                opacity: 0.9,
-              }}
-            >
-              {isExpanded ? "−" : "+"}
-            </div>
-          </div>
+          {isExpanded ? "−" : "+"}
         </button>
-
       </div>
 
       <div
         style={{
-          overflow: "hidden",
+          flex: 1,
+          minHeight: 0,
           maxHeight: isExpanded ? "60vh" : "0px",
+          overflowY: isExpanded ? "auto" : "hidden",
+          overflowX: "hidden",
           opacity: isExpanded ? 1 : 0,
           transform: isExpanded ? "translateY(0)" : "translateY(-6px)",
-          transition:
-            "max-height 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, transform 220ms ease",
+          transition: "max-height 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, transform 220ms ease",
           willChange: "max-height, opacity, transform",
         }}
       >
         <div
           style={{
-            overflowY: "auto",
-            overflowX: "hidden",
             padding: "0 16px 18px",
             textAlign: "left",
             fontSize: 13,
             lineHeight: 1.6,
             scrollbarWidth: "thin",
-            scrollbarColor: "rgba(156, 163, 175, 0.5) transparent",
+            scrollbarColor: "rgba(107, 114, 128, 0.5) transparent",
           }}
         >
           <Paragraph>
@@ -162,6 +215,7 @@ export default function TowerBubble({ tower, visible }) {
             opacity: 0;
             transform: translateY(6px) scale(0.98);
           }
+
           to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -184,19 +238,32 @@ export default function TowerBubble({ tower, visible }) {
         div::-webkit-scrollbar-thumb:hover {
           background: rgba(156, 163, 175, 0.7);
         }
+
+        div > div::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        div > div::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        div > div::-webkit-scrollbar-thumb {
+          background: rgba(107, 114, 128, 0.5);
+          border-radius: 3px;
+        }
+
+        div > div::-webkit-scrollbar-thumb:hover {
+          background: rgba(107, 114, 128, 0.7);
+        }
       `}</style>
     </div>
   );
 }
 
 function Paragraph({ children }) {
-  return <div style={{ marginBottom: 10 }}>{children}</div>;
+  return <div style={{ marginBottom: 8 }}>{children}</div>;
 }
 
 function Muted({ children }) {
-  return (
-    <span style={{ color: "#6b7280", fontWeight: 500 }}>
-      {children}
-    </span>
-  );
+  return <span style={{ color: "#6d6d6d", fontWeight: 500 }}>{children}</span>;
 }
