@@ -16,6 +16,7 @@ export const MODELS = [
     towerHeight: 30,
     scale: 2.1,
     blipColor: "#f5f5f5",
+    status: "Maintenance due",
     uri: "/models/SICA001946.glb",
     towerSpecs: {
       type: "Monopole",
@@ -138,6 +139,7 @@ export const MODELS = [
     towerHeight: 36,
     scale: 2.2,
     blipColor: "#f5f5f5",
+    status: "Offline",
     uri: "/models/SITX024649.glb",
     towerSpecs: {
       type: "Monopole",
@@ -279,6 +281,7 @@ export const MODELS = [
     towerHeight: 45,
     scale: 0.7,
     blipColor: "#f5f5f5",
+    status: "Maintenance due",
     uri: "/models/204312.glb",
     towerSpecs: {
       type: "Lattice",
@@ -419,6 +422,7 @@ export const MODELS = [
     towerHeight: 30,
     scale: 0.15,
     blipColor: "#f5f5f5",
+    status: "Maintenance due",
     uri: "/models/SICO001139.glb",
     towerSpecs: {
       type: "Monopole",
@@ -618,6 +622,7 @@ export const MODELS = [
     scale: 0.4,
     blipColor: "#f5f5f5",
     uri: "/models/Site A001.glb",
+      status: "Active",
     towerSpecs: {
       type: "Monopole",
       height: "24 m",
@@ -795,6 +800,7 @@ export const MODELS = [
     towerHeight: 50,
     scale: 2,
     uri: "/models/78266.glb",
+      status: "Offline",
     towerSpecs: {
       type: "Ground-Based Lattice Tower (3-Legged Hybrid Structure)",
       height: "50 m",

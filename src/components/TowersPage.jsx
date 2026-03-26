@@ -6,37 +6,31 @@ import ModelsPanel from "./Cesium/LeftPanel";
 const TOWER_OVERVIEW_META = {
   SICA001946: {
     location: "Yokohama Bay",
-    status: "Maintenance due",
     statusUpdated: "Today",
     assignedTo: "Tasneem",
   },
   SITX024649: {
     location: "Yokohama Bay",
-    status: "Offline",
     statusUpdated: "8 min ago",
     assignedTo: "Tasneem",
   },
   204312: {
     location: "Shinjuku area",
-    status: "Maintenance due",
     statusUpdated: "15 min ago",
     assignedTo: "Tasneem",
   },
   SICO001139: {
     location: "Central Honshu",
-    status: "Maintenance due",
     statusUpdated: "5 hrs ago",
     assignedTo: "Tasneem",
   },
   A001: {
     location: "Yokohama Bay",
-    status: "Active",
     statusUpdated: "20 hrs ago",
     assignedTo: "Tasneem",
   },
   78266: {
     location: "Shinjuku area",
-    status: "Offline",
     statusUpdated: "07 Feb '26 10:22 AM",
     assignedTo: "Tasneem",
   },
@@ -60,7 +54,7 @@ export default function TowersPage() {
       model,
       type: model.towerSpecs?.type || "-",
       location: TOWER_OVERVIEW_META[model.id]?.location || "Unknown",
-      status: TOWER_OVERVIEW_META[model.id]?.status || model.towerSpecs?.maintenance || "Unknown",
+      status: model.status || "Unknown",
       statusUpdated: TOWER_OVERVIEW_META[model.id]?.statusUpdated || "Today",
       assignedTo: TOWER_OVERVIEW_META[model.id]?.assignedTo || "Tasneem",
     }));
@@ -84,6 +78,7 @@ export default function TowersPage() {
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen((value) => !value)}
         onHome={() => navigate("/", { replace: true })}
+        onOverview={() => navigate("/", { replace: true })}
       />
 
       <main
@@ -276,7 +271,7 @@ export default function TowersPage() {
                       <td style={{ padding: "16px 12px" }}>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                           <Link
-                            to={`/${row.model.id}`}
+                            to={`/map/${row.model.id}`}
                             style={{
                               padding: "0",
                               textDecoration: "none",

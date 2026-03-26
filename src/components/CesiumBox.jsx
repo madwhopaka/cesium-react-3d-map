@@ -62,15 +62,15 @@ export default function CesiumMap() {
   const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
-    return new URLSearchParams(location.search).get("overview") === "1";
-  }, [location.search]);
+    return location.pathname === "/";
+  }, [location.pathname]);
 
   const overviewRows = useMemo(() => {
     return MODELS.map((model) => ({
       model,
       type: model.towerSpecs?.type || "-",
       location: model.towerSpecs?.location || model.towerSpecs?.region || "Site",
-      status: model.towerSpecs?.maintenance || "Active",
+      status: model.status || model.towerSpecs?.maintenance || "Active",
     }));
   }, []);
 
@@ -633,7 +633,7 @@ useEffect(() => {
   };
 
   const openOverviewPanel = () => {
-    navigate("/?overview=1", { replace: true });
+    navigate("/", { replace: true });
     setPanelOpen(true);
   };
 
@@ -852,11 +852,14 @@ useEffect(() => {
                 {filteredOverviewRows.map((row) => {
                   const isOffline = String(row.status).toLowerCase().includes("offline");
                   const isMaintenance = String(row.status).toLowerCase().includes("maintenance");
+                  const isActive = String(row.status).toLowerCase().includes("active");
                   const tone = isOffline
-                    ? { bg: "rgba(255, 210, 120, 0.12)", fg: "#f7c76e" }
+                    ? { bg: "rgba(245, 158, 11, 0.18)", fg: "#f59e0b", border: "rgba(245, 158, 11, 0.28)" }
                     : isMaintenance
-                    ? { bg: "rgba(255, 255, 255, 0.06)", fg: "#f5f5f5" }
-                    : { bg: "rgba(255,255,255,0.05)", fg: "#d9d9d9" };
+                    ? { bg: "rgba(239, 68, 68, 0.18)", fg: "#ef4444", border: "rgba(239, 68, 68, 0.28)" }
+                    : isActive
+                    ? { bg: "rgba(34, 197, 94, 0.18)", fg: "#22c55e", border: "rgba(34, 197, 94, 0.28)" }
+                    : { bg: "rgba(148, 163, 184, 0.16)", fg: "#cbd5e1", border: "rgba(148, 163, 184, 0.26)" };
 
                   return (
                     <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -868,12 +871,16 @@ useEffect(() => {
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            padding: "6px 10px",
+                            padding: "6px 11px",
                             borderRadius: 999,
                             background: tone.bg,
                             color: tone.fg,
+                            border: `1px solid ${tone.border}`,
                             fontSize: 12,
                             fontWeight: 700,
+                            letterSpacing: "0.02em",
+                            textTransform: "capitalize",
+                            boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
                           }}
                         >
                           {row.status}
@@ -882,7 +889,7 @@ useEffect(() => {
                       <td style={{ padding: "16px 18px" }}>
                         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                           <Link
-                            to={`/${row.model.id}`}
+                            to={`/map/${row.model.id}`}
                             style={{
                               color: "#f5f5f5",
                               fontSize: 12,
