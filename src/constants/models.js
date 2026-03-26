@@ -15,6 +15,7 @@ export const MODELS = [
     altitude: 92,
     towerHeight: 30,
     scale: 2.1,
+    blipColor: "#f5f5f5",
     uri: "/models/SICA001946.glb",
     towerSpecs: {
       type: "Monopole",
@@ -136,6 +137,7 @@ export const MODELS = [
     altitude: 129.18,
     towerHeight: 36,
     scale: 2.2,
+    blipColor: "#f5f5f5",
     uri: "/models/SITX024649.glb",
     towerSpecs: {
       type: "Monopole",
@@ -276,6 +278,7 @@ export const MODELS = [
     altitude: 468,
     towerHeight: 45,
     scale: 0.7,
+    blipColor: "#f5f5f5",
     uri: "/models/204312.glb",
     towerSpecs: {
       type: "Lattice",
@@ -415,6 +418,7 @@ export const MODELS = [
     altitude: 46,
     towerHeight: 30,
     scale: 0.15,
+    blipColor: "#f5f5f5",
     uri: "/models/SICO001139.glb",
     towerSpecs: {
       type: "Monopole",
@@ -612,6 +616,7 @@ export const MODELS = [
     altitude: 52.56,
     towerHeight: 24,
     scale: 0.4,
+    blipColor: "#f5f5f5",
     uri: "/models/Site A001.glb",
     towerSpecs: {
       type: "Monopole",
@@ -786,7 +791,7 @@ export const MODELS = [
     name: "Tower 78266, Ground-Based Lattice Tower (3-Legged Hybrid)",
     lon: 139.584000,
     lat: 35.915467,
-    altitude: 55.00,
+    altitude: 53.99,
     towerHeight: 50,
     scale: 2,
     uri: "/models/78266.glb",

@@ -17,10 +17,10 @@ export default function OrbitLockButton({ isVisible, isLocked, onToggle }) {
         zIndex: 10,
         padding: "14px 20px",
         background: isLocked 
-          ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" 
-          : "rgba(30, 41, 59, 0.95)",
+          ? "linear-gradient(135deg, #f5f5f5 0%, #cfcfcf 100%)" 
+          : "rgba(18, 18, 18, 0.95)",
         backdropFilter: "blur(10px)",
-        border: isLocked ? "2px solid #60a5fa" : "2px solid #334155",
+        border: isLocked ? "2px solid #f5f5f5" : "2px solid rgba(255,255,255,0.12)",
         borderRadius: "12px",
         color: "#fff",
         fontSize: "14px",
@@ -31,19 +31,19 @@ export default function OrbitLockButton({ isVisible, isLocked, onToggle }) {
         gap: "8px",
         transition: "all 0.3s",
         boxShadow: isLocked 
-          ? "0 0 20px rgba(59, 130, 246, 0.6)" 
+          ? "0 0 20px rgba(255, 255, 255, 0.25)" 
           : "0 4px 12px rgba(0, 0, 0, 0.4)",
       }}
       onMouseEnter={(e) => {
         e.target.style.transform = "translateY(-2px)";
         e.target.style.boxShadow = isLocked
-          ? "0 4px 24px rgba(59, 130, 246, 0.8)"
+          ? "0 4px 24px rgba(255, 255, 255, 0.3)"
           : "0 6px 16px rgba(0, 0, 0, 0.5)";
       }}
       onMouseLeave={(e) => {
         e.target.style.transform = "translateY(0)";
         e.target.style.boxShadow = isLocked
-          ? "0 0 20px rgba(59, 130, 246, 0.6)"
+          ? "0 0 20px rgba(255, 255, 255, 0.25)"
           : "0 4px 12px rgba(0, 0, 0, 0.4)";
       }}
       title={isLocked ? "Exit Orbit Mode" : "Enter Orbit Mode"}

@@ -6,6 +6,8 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MODEL_LOOKUP } from "../constants/models";
+import { normalizeNodeName } from "../helpers/helper";
+import PartBubble from "./Cesium/PartsModal";
 import TowerBubble from "./Cesium/TowerModal";
 
 export default function ModelViewer() {
@@ -17,9 +19,13 @@ export default function ModelViewer() {
   const controlsRef = useRef(null);
   const modelRef = useRef(null);
   const modelLoadedRef = useRef(false);
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const pointerRef = useRef(new THREE.Vector2());
 
   const model = MODEL_LOOKUP[modelId];
   const [isTowerBubbleVisible, setIsTowerBubbleVisible] = useState(false);
+  const [partBubble, setPartBubble] = useState(null);
+  const [bubbleAnchor, setBubbleAnchor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInIframe, setIsInIframe] = useState(false);
 
@@ -46,7 +52,7 @@ export default function ModelViewer() {
     if (!model) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#bdbdbd');
+      scene.background = new THREE.Color('#1F1C1C');
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
@@ -114,6 +120,61 @@ export default function ModelViewer() {
     controls.enablePan = true;
     controls.panSpeed = 0.8;
     controlsRef.current = controls;
+
+    const handlePartClick = (event) => {
+      if (!modelRef.current || !cameraRef.current || !rendererRef.current) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      const pointer = pointerRef.current;
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+
+      const raycaster = raycasterRef.current;
+      raycaster.setFromCamera(pointer, cameraRef.current);
+
+      const intersects = raycaster.intersectObject(modelRef.current, true);
+      if (!intersects.length) {
+        setPartBubble(null);
+        setBubbleAnchor(null);
+        return;
+      }
+
+      let node = intersects[0].object;
+      const fallbackLabel = node?.name || node?.type || "Model Part";
+      while (node) {
+        const rawName = node.name;
+        const key = normalizeNodeName(rawName);
+        const part = model.parts?.[key] || model.parts?.[rawName];
+
+        if (part) {
+          setPartBubble(part);
+          setBubbleAnchor({
+            x: event.clientX,
+            y: event.clientY,
+          });
+          return;
+        }
+
+        node = node.parent;
+      }
+
+      setPartBubble({
+        label: fallbackLabel,
+        manufacturer: "",
+        position: "Inside 3D model",
+        purpose: "Selected model component",
+        detailedPurpose: "This mesh is part of the current tower model.",
+        material: "",
+        lifeDuration: "",
+        icon: "◼",
+      });
+      setBubbleAnchor({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    };
+
+    renderer.domElement.addEventListener("click", handlePartClick);
 
     const loader = new GLTFLoader();
     const dracoLoader = new DRACOLoader();
@@ -186,6 +247,7 @@ export default function ModelViewer() {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      renderer.domElement.removeEventListener("click", handlePartClick);
       controls.dispose();
       dracoLoader.dispose();
       renderer.dispose();
@@ -202,8 +264,8 @@ export default function ModelViewer() {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#bdc2c6ff',
-        color: '#111827',
+          backgroundColor: '#2f2f2f',
+        color: '#f5f5f5',
         flexDirection: 'column',
         gap: '20px'
       }}>
@@ -212,8 +274,8 @@ export default function ModelViewer() {
           to="/" 
           style={{
             padding: '12px 24px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
+            backgroundColor: '#444444',
+            color: '#f5f5f5',
             textDecoration: 'none',
             borderRadius: '8px'
           }}
@@ -225,13 +287,13 @@ export default function ModelViewer() {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: '#f8f9fa' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: '#2f2f2f', color: '#f5f5f5', fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif' }}>
       {/* Loading Screen */}
       {isLoading && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(230, 232, 234, 0.95)',
+          backgroundColor: 'rgba(47, 47, 47, 0.96)',
           backdropFilter: 'blur(10px)',
           display: 'flex',
           flexDirection: 'column',
@@ -243,17 +305,17 @@ export default function ModelViewer() {
           <div style={{
             width: '60px',
             height: '60px',
-            border: '4px solid #e5e7eb',
-            borderTop: '4px solid #667eea',
+            border: '4px solid #454545',
+            borderTop: '4px solid #8a8a8a',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }} />
           <div style={{
             fontSize: '18px',
             fontWeight: '600',
-            color: '#111827',
+            color: '#f5f5f5',
           }}>
-            Loading 3D Model...
+            Loading 3D Model…
           </div>
           <style>
             {`
@@ -275,15 +337,15 @@ export default function ModelViewer() {
             left: '20px',
             zIndex: 1000,
             padding: '12px 24px',
-            backgroundColor: 'rgba(219, 215, 215, 0.95)',
-            color: '#111827',
+            backgroundColor: 'rgba(47, 47, 47, 0.96)',
+            color: '#f5f5f5',
             textDecoration: 'none',
             borderRadius: '8px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.24)',
             fontSize: '14px',
             fontWeight: '500',
             backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0,0,0,0.1)',
+            border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
           ← Back to Map
@@ -297,12 +359,12 @@ export default function ModelViewer() {
           right: '20px',
           zIndex: 1000,
           padding: '8px 12px',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          color: '#111827',
+          backgroundColor: 'rgba(47, 47, 47, 0.96)',
+          color: '#f5f5f5',
           borderRadius: '6px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          boxShadow: '0 10px 22px rgba(0,0,0,0.24)',
           backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(0,0,0,0.1)',
+          border: '1px solid rgba(255,255,255,0.06)',
         }}
       >
         <h2 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '600' }}>{model.name}</h2>
@@ -320,6 +382,13 @@ export default function ModelViewer() {
       <TowerBubble
         tower={model}
         visible={isTowerBubbleVisible && !isLoading}
+        showModelViewerLink={false}
+      />
+
+      <PartBubble
+        bubble={partBubble}
+        anchor={bubbleAnchor}
+        onClose={() => setPartBubble(null)}
       />
     </div>
   );
