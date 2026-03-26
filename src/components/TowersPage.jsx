@@ -44,7 +44,10 @@ function statusTone(status) {
   return { bg: "#ececec", fg: "#4b4b4b", border: "#d1d1d1" };
 }
 
-export default function TowersPage() {
+export default function TowersPage({
+  renderProfile = "balanced",
+  onRenderProfileChange,
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [filterValue, setFilterValue] = useState("All");
   const navigate = useNavigate();
@@ -65,6 +68,20 @@ export default function TowersPage() {
     return rows.filter((row) => row.status.toLowerCase() === filterValue.toLowerCase());
   }, [filterValue, rows]);
 
+  const RENDER_PROFILE_LABELS = {
+    fast: "Fast",
+    balanced: "Balanced",
+    quality: "Quality",
+  };
+
+  const cycleRenderProfile = () => {
+    if (typeof onRenderProfileChange !== "function") return;
+    const order = ["fast", "balanced", "quality"];
+    const currentIndex = order.indexOf(renderProfile);
+    const nextProfile = order[(currentIndex + 1 + order.length) % order.length];
+    onRenderProfileChange(nextProfile);
+  };
+
   return (
     <div
       style={{
@@ -79,6 +96,10 @@ export default function TowersPage() {
         onToggle={() => setSidebarOpen((value) => !value)}
         onHome={() => navigate("/", { replace: true })}
         onOverview={() => navigate("/", { replace: true })}
+        renderProfile={renderProfile}
+        renderProfileLabel={RENDER_PROFILE_LABELS[renderProfile] || "Balanced"}
+        onCycleRenderProfile={cycleRenderProfile}
+        onSetRenderProfile={onRenderProfileChange}
       />
 
       <main

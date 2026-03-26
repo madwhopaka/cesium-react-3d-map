@@ -257,8 +257,8 @@ export default function ModelsPanel({
                 marginTop: 10,
                 display: "grid",
                 gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                gap: 6,
-                padding: 4,
+                gap:2,
+                padding: 3,
                 borderRadius: 12,
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.08)",
@@ -276,11 +276,13 @@ export default function ModelsPanel({
                     type="button"
                     onClick={() => onSetRenderProfile?.(option.key)}
                     style={{
+                      width: "100%",
+                      boxSizing: "border-box",
                       border: isActive ? "1px solid rgba(255,255,255,0.24)" : "1px solid transparent",
                       background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
                       color: isActive ? "#ffffff" : "#c4bbbb",
                       borderRadius: 9,
-                      padding: "8px 6px",
+                      padding: "10px 4px",
                       cursor: "pointer",
                       fontSize: 11,
                       fontWeight: isActive ? 800 : 700,
@@ -289,7 +291,7 @@ export default function ModelsPanel({
                     }}
                     title={`Switch to ${option.label} mode`}
                   >
-                    {option.label}
+                    <span>{option.label}</span>
                   </button>
                 );
               })}
