@@ -58,12 +58,87 @@ export default function CesiumMap() {
   const [isModelVisible, setIsModelVisible] = useState(false);
   const [showMiniViewer, setShowMiniViewer] = useState(false); // Mini viewer modal state
   const [overviewSearch, setOverviewSearch] = useState("");
+  const [renderProfile, setRenderProfile] = useState("balanced");
   const cloudLayerRef = useRef(null); // Track cloud layer entity
   const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
     return location.pathname === "/";
   }, [location.pathname]);
+
+  const RENDER_PRESETS = {
+    fast: {
+      label: "Fast",
+      resolutionScale: 0.75,
+      maximumScreenSpaceError: 32,
+      dynamicScreenSpaceErrorDensity: 0.01,
+      dynamicScreenSpaceErrorFactor: 8,
+      highDynamicRange: false,
+      enableGlobeLighting: false,
+      enableModelShadows: false,
+    },
+    balanced: {
+      label: "Balanced",
+      resolutionScale: 0.9,
+      maximumScreenSpaceError: 22,
+      dynamicScreenSpaceErrorDensity: 0.004,
+      dynamicScreenSpaceErrorFactor: 6,
+      highDynamicRange: false,
+      enableGlobeLighting: true,
+      enableModelShadows: false,
+    },
+    quality: {
+      label: "Quality",
+      resolutionScale: 1,
+      maximumScreenSpaceError: 14,
+      dynamicScreenSpaceErrorDensity: 0.002,
+      dynamicScreenSpaceErrorFactor: 4,
+      highDynamicRange: true,
+      enableGlobeLighting: true,
+      enableModelShadows: true,
+    },
+  };
+
+  const applyRenderPreset = (viewer, tileset, profile) => {
+    const preset = RENDER_PRESETS[profile] || RENDER_PRESETS.balanced;
+
+    viewer.resolutionScale = preset.resolutionScale;
+    viewer.scene.highDynamicRange = preset.highDynamicRange;
+    viewer.scene.globe.enableLighting = preset.enableGlobeLighting;
+
+    if (viewer.scene.postProcessStages?.fxaa) {
+      viewer.scene.postProcessStages.fxaa.enabled = true;
+    }
+
+    tileset.maximumScreenSpaceError = preset.maximumScreenSpaceError;
+    tileset.dynamicScreenSpaceError = true;
+    tileset.dynamicScreenSpaceErrorDensity = preset.dynamicScreenSpaceErrorDensity;
+    tileset.dynamicScreenSpaceErrorFactor = preset.dynamicScreenSpaceErrorFactor;
+    tileset.skipLevelOfDetail = true;
+    tileset.baseScreenSpaceError = 1024;
+    tileset.skipScreenSpaceErrorFactor = 16;
+    tileset.skipLevels = 1;
+    tileset.cullWithChildrenBounds = true;
+    tileset.preloadWhenHidden = false;
+
+    Object.values(entityMapRef.current).forEach((entity) => {
+      if (entity?.model) {
+        entity.model.shadows = preset.enableModelShadows
+          ? Cesium.ShadowMode.ENABLED
+          : Cesium.ShadowMode.DISABLED;
+      }
+    });
+
+    viewer.scene.requestRender();
+  };
+
+  const cycleRenderProfile = () => {
+    const order = ["fast", "balanced", "quality"];
+    setRenderProfile((current) => {
+      const currentIndex = order.indexOf(current);
+      return order[(currentIndex + 1) % order.length];
+    });
+  };
 
   const overviewRows = useMemo(() => {
     return MODELS.map((model) => ({
@@ -135,6 +210,7 @@ export default function CesiumMap() {
       );
       viewer.scene.primitives.add(tileset);
       tilesetRef.current = tileset;
+      applyRenderPreset(viewer, tileset, renderProfile);
 
       // --- Custom Skybox ---
       const skyboxSources = {
@@ -216,7 +292,9 @@ export default function CesiumMap() {
             scale: model.scale,
             minimumPixelSize: MODEL_CONFIG.minimumPixelSize,
             maximumScale: MODEL_CONFIG.maximumScale,
-            shadows: Cesium.ShadowMode.ENABLED,
+            shadows: RENDER_PRESETS[renderProfile].enableModelShadows
+              ? Cesium.ShadowMode.ENABLED
+              : Cesium.ShadowMode.DISABLED,
           },
         });
 
@@ -653,6 +731,14 @@ useEffect(() => {
     return () => window.clearTimeout(timeoutId);
   }, [routeModelId, entitiesReady]);
 
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const tileset = tilesetRef.current;
+    if (!viewer || !tileset) return;
+
+    applyRenderPreset(viewer, tileset, renderProfile);
+  }, [renderProfile]);
+
   /* ---------------- ESC KEY TO CLOSE MINI VIEWER ---------------- */
   useEffect(() => {
     const handleEsc = (event) => {
@@ -688,6 +774,10 @@ useEffect(() => {
         onHome={goHome}
         onOverview={openOverviewPanel}
         onSelectModel={flyToModel}
+        renderProfile={renderProfile}
+        renderProfileLabel={RENDER_PRESETS[renderProfile].label}
+        onCycleRenderProfile={cycleRenderProfile}
+        onSetRenderProfile={setRenderProfile}
       />
 
       <div
@@ -847,6 +937,7 @@ useEffect(() => {
                       style={{
                         textAlign: "left",
                         padding: "14px 18px",
+                        width: heading === "Tower Type" ? 180 : "auto",
                         fontSize: 11,
                         textTransform: "uppercase",
                         letterSpacing: "0.12em",
@@ -876,7 +967,19 @@ useEffect(() => {
                     <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                       <td style={{ padding: "16px 18px", fontSize: 13, fontWeight: 700 }}>{row.model.id}</td>
                       <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.location}</td>
-                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.type}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9", maxWidth: 180 }}>
+                        <span
+                          title={row.type}
+                          style={{
+                            display: "block",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {row.type}
+                        </span>
+                      </td>
                       <td style={{ padding: "16px 18px" }}>
                         <span
                           style={{
