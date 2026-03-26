@@ -20,6 +20,7 @@ export const MODELS = [
     uri: "/models/SICA001946.glb",
     towerSpecs: {
       type: "Monopole",
+      location: "Osaka, Japan",
       height: "30 m",
       baseWidth: "1.6 m",
       topWidth: "0.5 m",
@@ -143,6 +144,7 @@ export const MODELS = [
     uri: "/models/SITX024649.glb",
     towerSpecs: {
       type: "Monopole",
+      location: "Sapporo, Japan",
       height: "36 m",
       baseWidth: "1.8 m",
       topWidth: "0.45 m",
@@ -285,6 +287,7 @@ export const MODELS = [
     uri: "/models/204312.glb",
     towerSpecs: {
       type: "Lattice",
+      location: "Nagano, Japan",
       height: "45 m",
       baseWidth: "6.0 m",
       topWidth: "1.5 m",
@@ -426,6 +429,7 @@ export const MODELS = [
     uri: "/models/SICO001139.glb",
     towerSpecs: {
       type: "Monopole",
+      location: "Yokohama, Japan",
       height: "30 m",
       baseWidth: "1.2 m",
       topWidth: "0.5 m",
@@ -625,6 +629,7 @@ export const MODELS = [
       status: "Active",
     towerSpecs: {
       type: "Monopole",
+      location: "Near Gifu, Japan",
       height: "24 m",
       baseWidth: "0.9 m",
       topWidth: "0.35 m",
@@ -796,13 +801,14 @@ export const MODELS = [
     name: "Tower 78266, Ground-Based Lattice Tower (3-Legged Hybrid)",
     lon: 139.584000,
     lat: 35.915467,
-    altitude: 53.99,
+    altitude: 52.99,
     towerHeight: 50,
     scale: 2,
     uri: "/models/78266.glb",
       status: "Offline",
     towerSpecs: {
       type: "Ground-Based Lattice Tower (3-Legged Hybrid Structure)",
+      location: "Saitama, Japan",
       height: "50 m",
       baseWidth: "5.5 m",
       topWidth: "1.8 m",

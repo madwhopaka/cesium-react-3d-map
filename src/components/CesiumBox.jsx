@@ -20,6 +20,11 @@ import TowerBubble from "./Cesium/TowerModal";
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
 export default function CesiumMap() {
+  const HOVER_CARD_WIDTH = 236;
+  const HOVER_CARD_HEIGHT = 112;
+  const HOVER_CARD_GAP = 1;
+  const HOVER_CARD_PADDING = 8;
+
   const BLIP_TIP_OFFSET_METERS = 0;
   const BLIP_HEIGHT_RATIO = 0.82;
   const BLIP_PIXEL_OFFSET_Y = -10;
@@ -57,13 +62,91 @@ export default function CesiumMap() {
   const [showViewModelButton, setShowViewModelButton] = useState(false);
   const [isModelVisible, setIsModelVisible] = useState(false);
   const [showMiniViewer, setShowMiniViewer] = useState(false); // Mini viewer modal state
+  const [hoverBlipCard, setHoverBlipCard] = useState(null);
+  const [isHoverBlipCardVisible, setIsHoverBlipCardVisible] = useState(false);
   const [overviewSearch, setOverviewSearch] = useState("");
+  const [renderProfile, setRenderProfile] = useState("balanced");
   const cloudLayerRef = useRef(null); // Track cloud layer entity
+  const hoverCardHideTimeoutRef = useRef(null);
   const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
     return location.pathname === "/";
   }, [location.pathname]);
+
+  const RENDER_PRESETS = {
+    fast: {
+      label: "Fast",
+      resolutionScale: 0.75,
+      maximumScreenSpaceError: 32,
+      dynamicScreenSpaceErrorDensity: 0.01,
+      dynamicScreenSpaceErrorFactor: 8,
+      highDynamicRange: false,
+      enableGlobeLighting: false,
+      enableModelShadows: false,
+    },
+    balanced: {
+      label: "Balanced",
+      resolutionScale: 0.9,
+      maximumScreenSpaceError: 22,
+      dynamicScreenSpaceErrorDensity: 0.004,
+      dynamicScreenSpaceErrorFactor: 6,
+      highDynamicRange: false,
+      enableGlobeLighting: true,
+      enableModelShadows: false,
+    },
+    quality: {
+      label: "Quality",
+      resolutionScale: 1,
+      maximumScreenSpaceError: 14,
+      dynamicScreenSpaceErrorDensity: 0.002,
+      dynamicScreenSpaceErrorFactor: 4,
+      highDynamicRange: true,
+      enableGlobeLighting: true,
+      enableModelShadows: true,
+    },
+  };
+
+  const applyRenderPreset = (viewer, tileset, profile) => {
+    const preset = RENDER_PRESETS[profile] || RENDER_PRESETS.balanced;
+
+    viewer.resolutionScale = preset.resolutionScale;
+    viewer.scene.highDynamicRange = preset.highDynamicRange;
+    viewer.scene.globe.enableLighting = preset.enableGlobeLighting;
+
+    if (viewer.scene.postProcessStages?.fxaa) {
+      viewer.scene.postProcessStages.fxaa.enabled = true;
+    }
+
+    tileset.maximumScreenSpaceError = preset.maximumScreenSpaceError;
+    tileset.dynamicScreenSpaceError = true;
+    tileset.dynamicScreenSpaceErrorDensity = preset.dynamicScreenSpaceErrorDensity;
+    tileset.dynamicScreenSpaceErrorFactor = preset.dynamicScreenSpaceErrorFactor;
+    tileset.skipLevelOfDetail = true;
+    tileset.baseScreenSpaceError = 1024;
+    tileset.skipScreenSpaceErrorFactor = 16;
+    tileset.skipLevels = 1;
+    tileset.cullWithChildrenBounds = true;
+    tileset.preloadWhenHidden = false;
+
+    Object.values(entityMapRef.current).forEach((entity) => {
+      if (entity?.model) {
+        entity.model.shadows = preset.enableModelShadows
+          ? Cesium.ShadowMode.ENABLED
+          : Cesium.ShadowMode.DISABLED;
+      }
+    });
+
+    viewer.scene.requestRender();
+  };
+
+  const cycleRenderProfile = () => {
+    const order = ["fast", "balanced", "quality"];
+    setRenderProfile((current) => {
+      const currentIndex = order.indexOf(current);
+      return order[(currentIndex + 1) % order.length];
+    });
+  };
 
   const overviewRows = useMemo(() => {
     return MODELS.map((model) => ({
@@ -135,6 +218,7 @@ export default function CesiumMap() {
       );
       viewer.scene.primitives.add(tileset);
       tilesetRef.current = tileset;
+      applyRenderPreset(viewer, tileset, renderProfile);
 
       // --- Custom Skybox ---
       const skyboxSources = {
@@ -216,7 +300,9 @@ export default function CesiumMap() {
             scale: model.scale,
             minimumPixelSize: MODEL_CONFIG.minimumPixelSize,
             maximumScale: MODEL_CONFIG.maximumScale,
-            shadows: Cesium.ShadowMode.ENABLED,
+            shadows: RENDER_PRESETS[renderProfile].enableModelShadows
+              ? Cesium.ShadowMode.ENABLED
+              : Cesium.ShadowMode.DISABLED,
           },
         });
 
@@ -292,7 +378,7 @@ export default function CesiumMap() {
           if (!entity) return;
 
           if (blip) {
-            blip.show = !entity.show;
+            blip.show = true;
           }
 
           if (label) {
@@ -351,14 +437,16 @@ export default function CesiumMap() {
       onCameraChange();
 
       const clearHoveredBlipLabel = () => {
-        if (!hoveredBlipIdRef.current) return;
+        if (hoveredBlipIdRef.current) {
+          const previousLabel = labelMapRef.current[hoveredBlipIdRef.current];
+          if (previousLabel) {
+            previousLabel.show = false;
+          }
 
-        const previousLabel = labelMapRef.current[hoveredBlipIdRef.current];
-        if (previousLabel) {
-          previousLabel.show = false;
+          hoveredBlipIdRef.current = null;
         }
 
-        hoveredBlipIdRef.current = null;
+        setHoverBlipCard(null);
       };
 
       const onMouseMove = (movement) => {
@@ -370,8 +458,8 @@ export default function CesiumMap() {
           return;
         }
 
-        const entity = entityMapRef.current[modelId];
-        if (entity?.show) {
+        const isBlipHover = picked?.id === blipMapRef.current[modelId];
+        if (!isBlipHover) {
           clearHoveredBlipLabel();
           return;
         }
@@ -383,10 +471,40 @@ export default function CesiumMap() {
           }
         }
 
-        const label = labelMapRef.current[modelId];
-        if (label) {
-          label.show = true;
-          hoveredBlipIdRef.current = modelId;
+        hoveredBlipIdRef.current = modelId;
+
+        const model = MODEL_LOOKUP[modelId];
+        if (model) {
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const minX = containerRect
+            ? containerRect.left + HOVER_CARD_PADDING + HOVER_CARD_WIDTH / 2
+            : HOVER_CARD_PADDING + HOVER_CARD_WIDTH / 2;
+          const maxX = containerRect
+            ? containerRect.right - HOVER_CARD_PADDING - HOVER_CARD_WIDTH / 2
+            : window.innerWidth - HOVER_CARD_PADDING - HOVER_CARD_WIDTH / 2;
+          const clampedX = Math.max(minX, Math.min(maxX, movement.endPosition.x));
+
+          const minY = containerRect
+            ? containerRect.top + HOVER_CARD_PADDING
+            : HOVER_CARD_PADDING;
+          const maxY = containerRect
+            ? containerRect.bottom - HOVER_CARD_PADDING
+            : window.innerHeight - HOVER_CARD_PADDING;
+          const clampedY = Math.max(minY, Math.min(maxY, movement.endPosition.y));
+
+          const hasRoomAbove = containerRect
+            ? movement.endPosition.y - (HOVER_CARD_HEIGHT + HOVER_CARD_GAP) >=
+              containerRect.top + HOVER_CARD_PADDING
+            : movement.endPosition.y - (HOVER_CARD_HEIGHT + HOVER_CARD_GAP) >=
+              HOVER_CARD_PADDING;
+          const placement = hasRoomAbove ? "above" : "below";
+
+          setHoverBlipCard({
+            model,
+            x: clampedX,
+            y: clampedY,
+            placement,
+          });
         }
       };
 
@@ -412,6 +530,7 @@ export default function CesiumMap() {
         console.log('picked',picked); 
         setPartBubble(null);
         setBubbleAnchor(null); 
+        setHoverBlipCard(null);
 
         if (picked?.detail?.node && picked?.id) {
           const modelId = picked.id.modelId;
@@ -653,6 +772,14 @@ useEffect(() => {
     return () => window.clearTimeout(timeoutId);
   }, [routeModelId, entitiesReady]);
 
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const tileset = tilesetRef.current;
+    if (!viewer || !tileset) return;
+
+    applyRenderPreset(viewer, tileset, renderProfile);
+  }, [renderProfile]);
+
   /* ---------------- ESC KEY TO CLOSE MINI VIEWER ---------------- */
   useEffect(() => {
     const handleEsc = (event) => {
@@ -679,6 +806,128 @@ useEffect(() => {
 
   return (
     <>
+      {hoverBlipCard && (
+        <div
+          style={{
+            position: "fixed",
+            left: hoverBlipCard.x,
+            top: hoverBlipCard.y,
+            transform:
+              hoverBlipCard.placement === "below"
+                ? `translate(-50%, ${HOVER_CARD_GAP}px)`
+                : `translate(-50%, calc(-100% - ${HOVER_CARD_GAP}px))`,
+            zIndex: 60,
+            width: HOVER_CARD_WIDTH,
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              borderRadius: 14,
+              overflow: "hidden",
+              background: "#ececec",
+              boxShadow: "0 16px 40px rgba(0,0,0,0.34)",
+              border: "1px solid rgba(255,255,255,0.4)",
+              color: "#1f1f1f",
+            }}
+          >
+            <div
+              style={{
+                padding: "6px 10px",
+                background: String(hoverBlipCard.model.status || "").toLowerCase().includes("maintenance")
+                  ? "#e4c3cb"
+                  : String(hoverBlipCard.model.status || "").toLowerCase().includes("offline")
+                  ? "#f2dcb3"
+                  : "#cce8d7",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 999,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  fontSize: 11,
+                  background: String(hoverBlipCard.model.status || "").toLowerCase().includes("maintenance")
+                    ? "#e11d48"
+                    : String(hoverBlipCard.model.status || "").toLowerCase().includes("offline")
+                    ? "#d97706"
+                    : "#16a34a",
+                }}
+              >
+                i
+              </span>
+              <span>
+                {String(hoverBlipCard.model.status || "").toLowerCase().includes("maintenance")
+                  ? "Needs maintenance"
+                  : hoverBlipCard.model.status || "Tower status"}
+              </span>
+            </div>
+
+            <div style={{ padding: "8px 10px 6px" }}>
+              <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.15 }}>
+                {hoverBlipCard.model.towerSpecs?.location || "Japan"}
+              </div>
+              <div
+                style={{
+                  marginTop: 1,
+                  fontSize: 11,
+                  color: "#303030",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+                title={hoverBlipCard.model.towerSpecs?.type || "Tower"}
+              >
+                {hoverBlipCard.model.towerSpecs?.type || "Tower"}
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderTop: "1px solid rgba(0,0,0,0.12)",
+                padding: "5px 8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 6,
+                fontSize: 10,
+                color: "#252525",
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 12 }}>📶</span>
+                <span
+                  style={{
+                    background: "rgba(0,0,0,0.08)",
+                    borderRadius: 6,
+                    padding: "2px 6px",
+                    fontWeight: 700,
+                  }}
+                >
+                  #{hoverBlipCard.model.id}
+                </span>
+              </span>
+
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#3a3a3a" }}>
+                <span style={{ fontSize: 11 }}>↻</span>
+                <span>5 min ago</span>
+              </span>
+
+              <span style={{ fontSize: 13, lineHeight: 1 }}>›</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <LoadingScreen isVisible={isLoading3D} leftOffset={sidebarWidth} />
 
       <ModelsPanel
@@ -688,6 +937,10 @@ useEffect(() => {
         onHome={goHome}
         onOverview={openOverviewPanel}
         onSelectModel={flyToModel}
+        renderProfile={renderProfile}
+        renderProfileLabel={RENDER_PRESETS[renderProfile].label}
+        onCycleRenderProfile={cycleRenderProfile}
+        onSetRenderProfile={setRenderProfile}
       />
 
       <div
@@ -847,6 +1100,7 @@ useEffect(() => {
                       style={{
                         textAlign: "left",
                         padding: "14px 18px",
+                        width: heading === "Tower Type" ? 180 : "auto",
                         fontSize: 11,
                         textTransform: "uppercase",
                         letterSpacing: "0.12em",
@@ -876,7 +1130,19 @@ useEffect(() => {
                     <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                       <td style={{ padding: "16px 18px", fontSize: 13, fontWeight: 700 }}>{row.model.id}</td>
                       <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.location}</td>
-                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.type}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9", maxWidth: 180 }}>
+                        <span
+                          title={row.type}
+                          style={{
+                            display: "block",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {row.type}
+                        </span>
+                      </td>
                       <td style={{ padding: "16px 18px" }}>
                         <span
                           style={{

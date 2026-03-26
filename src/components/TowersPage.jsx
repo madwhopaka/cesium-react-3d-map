@@ -228,6 +228,7 @@ export default function TowersPage() {
                         style={{
                           textAlign: "left",
                           padding: "14px 12px",
+                          width: heading === "Tower Type" ? 190 : "auto",
                           fontSize: 11,
                           textTransform: "uppercase",
                           letterSpacing: "0.12em",
@@ -248,7 +249,19 @@ export default function TowersPage() {
                     <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                       <td style={{ padding: "16px 12px", fontSize: 13, fontWeight: 700 }}>{row.model.id}</td>
                         <td style={{ padding: "16px 12px", fontSize: 13, color: "#d9d0d0" }}>{row.location}</td>
-                      <td style={{ padding: "16px 12px", fontSize: 13, color: "#d9d0d0" }}>{row.type}</td>
+                      <td style={{ padding: "16px 12px", fontSize: 13, color: "#d9d0d0", maxWidth: 190 }}>
+                        <span
+                          title={row.type}
+                          style={{
+                            display: "block",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {row.type}
+                        </span>
+                      </td>
                       <td style={{ padding: "16px 12px" }}>
                         <span
                           style={{

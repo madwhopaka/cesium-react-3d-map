@@ -2,7 +2,17 @@ import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Home, Map, RadioTower, TriangleAlert, LayoutDashboard, ChevronLeft } from "lucide-react";
 
-export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOverview }) {
+export default function ModelsPanel({
+  models,
+  isOpen,
+  onToggle,
+  onHome,
+  onOverview,
+  renderProfile = "balanced",
+  renderProfileLabel = "Balanced",
+  onCycleRenderProfile,
+  onSetRenderProfile,
+}) {
   const location = useLocation();
   const [pendingActiveItem, setPendingActiveItem] = useState(null);
 
@@ -236,19 +246,75 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
             }}
           >
             <div style={{ color: "#b0a7a7", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em" }}>
-              Tower Details
+              Render Profile
             </div>
-            <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: "#f5f5f5" }}>
-              Browse tower metrics, search the list, and open the map or 3D viewer.
+            <div style={{ marginTop: 8, color: "#b0a7a7", fontSize: 12, lineHeight: 1.45 }}>
+              Choose quality based on device performance.
             </div>
-            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.05)", fontSize: 11 }}>
-                {models?.length ?? 0} towers
-              </span>
-              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.05)", fontSize: 11 }}>
-                Black &amp; white
-              </span>
+
+            <div
+              style={{
+                marginTop: 10,
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: 6,
+                padding: 4,
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {[
+                { key: "fast", label: "Fast" },
+                { key: "balanced", label: "Balanced" },
+                { key: "quality", label: "Quality" },
+              ].map((option) => {
+                const isActive = renderProfile === option.key;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => onSetRenderProfile?.(option.key)}
+                    style={{
+                      border: isActive ? "1px solid rgba(255,255,255,0.24)" : "1px solid transparent",
+                      background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
+                      color: isActive ? "#ffffff" : "#c4bbbb",
+                      borderRadius: 9,
+                      padding: "8px 6px",
+                      cursor: "pointer",
+                      fontSize: 11,
+                      fontWeight: isActive ? 800 : 700,
+                      letterSpacing: "0.01em",
+                      transition: "background 140ms ease, border-color 140ms ease, color 140ms ease",
+                    }}
+                    title={`Switch to ${option.label} mode`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
+
+            <button
+              type="button"
+              onClick={onCycleRenderProfile}
+              style={{
+                marginTop: 8,
+                width: "100%",
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "transparent",
+                color: "#b0a7a7",
+                borderRadius: 10,
+                padding: "8px 10px",
+                cursor: "pointer",
+                fontSize: 11,
+                fontWeight: 700,
+                textAlign: "center",
+              }}
+              title="Cycle profile"
+            >
+              Current: {renderProfileLabel}
+            </button>
           </div>
         </div>
       )}
