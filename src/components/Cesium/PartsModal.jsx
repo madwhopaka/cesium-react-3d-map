@@ -55,15 +55,16 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           width: 320,
           maxHeight: 400,
           padding: "10px",
-          background: "rgba(17, 24, 39, 0.96)",
-          backdropFilter: "blur(10px)",
+          background: "rgba(255, 255, 255, 0.98)",
+          backdropFilter: "blur(12px)",
           borderRadius: "22px",
-          color: "#e5e7eb",
-          boxShadow: "0 12px 36px rgba(0,0,0,0.45)",
+          color: "#2f2f2f",
+          boxShadow: "0 16px 44px rgba(0,0,0,0.16)",
           zIndex: 1000,
           animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
           display: "flex",
           flexDirection: "column",
+          fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
         }}
       >
         {/* Tail */}
@@ -80,11 +81,11 @@ export default function PartBubble({ bubble, anchor, onClose }) {
             borderLeft:
               tailHorizontal === "left"
                 ? "none"
-                : "12px solid rgba(17,24,39,0.96)",
+                : "12px solid rgba(255,255,255,0.98)",
             borderRight:
               tailHorizontal === "right"
                 ? "none"
-                : "12px solid rgba(17,24,39,0.96)",
+                : "12px solid rgba(255,255,255,0.98)",
           }}
         />
 
@@ -105,7 +106,7 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           {/* Title line */}
           <div style={{ marginBottom: 12 }}>
             <span style={{ fontSize: 18 }}>{bubble.icon}</span>{" "}
-            <strong style={{ fontSize: 15 }}>{bubble.label}</strong>
+            <strong style={{ fontSize: 15, color: "#2f2f2f" }}>{bubble.label}</strong>
           </div>
 
           {/* Manufacturer */}
@@ -201,7 +202,7 @@ function Paragraph({ children }) {
 
 function Muted({ children }) {
   return (
-    <span style={{ color: "#9ca3af", fontWeight: 500 }}>
+    <span style={{ color: "#6b7280", fontWeight: 500 }}>
       {children}
     </span>
   );

@@ -39,56 +39,69 @@ export default function TowerBubble({ tower, visible }) {
         width: 320,
         maxHeight: "calc(100vh - 32px)",
         padding: "10px",
-        background: "rgba(17, 24, 39, 0.96)",
-        backdropFilter: "blur(10px)",
+          background: "rgba(255, 255, 255, 0.98)",
+          backdropFilter: "blur(12px)",
         borderRadius: "22px",
-        color: "#e5e7eb",
-        boxShadow: "0 12px 36px rgba(0,0,0,0.45)",
+          color: "#2f2f2f",
+          boxShadow: "0 16px 44px rgba(0,0,0,0.16)",
         zIndex: 1000,
         animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
         display: "flex",
         flexDirection: "column",
         pointerEvents: "auto",
+          fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
       }}
     >
-      <button
-        type="button"
-        onClick={() => setIsExpanded((value) => !value)}
+      <div
         style={{
-          width: "100%",
-          border: "none",
-          background: "transparent",
-          color: "inherit",
-          cursor: "pointer",
-          textAlign: "left",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
           padding: "10px 10px 12px",
           borderRadius: "16px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {tower.name}
+        <button
+          type="button"
+          onClick={() => setIsExpanded((value) => !value)}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            border: "none",
+            background: "transparent",
+            color: "inherit",
+            cursor: "pointer",
+            textAlign: "left",
+            padding: 0,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {tower.name}
+              </div>
+              <div style={{ marginTop: 4, color: "#6b7280", fontSize: 12 }}>
+                Maintenance: <span style={{ color: "#2f2f2f", fontWeight: 600 }}>{maintenanceStatus}</span>
+              </div>
             </div>
-            <div style={{ marginTop: 4, color: "#9ca3af", fontSize: 12 }}>
-              Maintenance: <span style={{ color: "#e5e7eb", fontWeight: 600 }}>{maintenanceStatus}</span>
-            </div>
-          </div>
 
-          <div
-            style={{
-              color: "#93c5fd",
-              fontSize: 18,
-              flexShrink: 0,
-              transition: "transform 220ms ease, opacity 220ms ease",
-              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-              opacity: 0.9,
-            }}
-          >
-            {isExpanded ? "−" : "+"}
+            <div
+              style={{
+                color: "#2f2f2f",
+                fontSize: 18,
+                flexShrink: 0,
+                transition: "transform 220ms ease, opacity 220ms ease",
+                transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                opacity: 0.9,
+              }}
+            >
+              {isExpanded ? "−" : "+"}
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+
+      </div>
 
       <div
         style={{
@@ -182,7 +195,7 @@ function Paragraph({ children }) {
 
 function Muted({ children }) {
   return (
-    <span style={{ color: "#9ca3af", fontWeight: 500 }}>
+    <span style={{ color: "#6b7280", fontWeight: 500 }}>
       {children}
     </span>
   );

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -29,6 +29,8 @@ export default function CesiumMap() {
   const FLY_TO_PITCH_DEG = -25;
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const { modelId: routeModelId } = useParams();
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
   const tilesetRef = useRef(null);
@@ -36,7 +38,9 @@ export default function CesiumMap() {
   const entityMapRef = useRef({});
   const blipMapRef = useRef({});
   const labelMapRef = useRef({}); // NEW: Separate labels
+  const hoveredBlipIdRef = useRef(null);
   const activeModelRef = useRef(null);
+  const homeViewRef = useRef(null);
 
   const isFlyingRef = useRef(false);
   const frameCounterRef = useRef(0);
@@ -53,7 +57,34 @@ export default function CesiumMap() {
   const [showViewModelButton, setShowViewModelButton] = useState(false);
   const [isModelVisible, setIsModelVisible] = useState(false);
   const [showMiniViewer, setShowMiniViewer] = useState(false); // Mini viewer modal state
+  const [overviewSearch, setOverviewSearch] = useState("");
   const cloudLayerRef = useRef(null); // Track cloud layer entity
+  const sidebarWidth = panelOpen ? 324 : 76;
+  const hasAutoFlewRef = useRef(false);
+  const isOverviewOpen = useMemo(() => {
+    return new URLSearchParams(location.search).get("overview") === "1";
+  }, [location.search]);
+
+  const overviewRows = useMemo(() => {
+    return MODELS.map((model) => ({
+      model,
+      type: model.towerSpecs?.type || "-",
+      location: model.towerSpecs?.location || model.towerSpecs?.region || "Site",
+      status: model.towerSpecs?.maintenance || "Active",
+    }));
+  }, []);
+
+  const filteredOverviewRows = useMemo(() => {
+    const query = overviewSearch.trim().toLowerCase();
+    if (!query) return overviewRows;
+
+    return overviewRows.filter((row) => {
+      return [row.model.id, row.model.name, row.location, row.type, row.status]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [overviewRows, overviewSearch]);
 
   /* ---------------- INIT ---------------- */
   useEffect(() => {
@@ -65,6 +96,7 @@ export default function CesiumMap() {
     const init = async () => {
       viewer = new Cesium.Viewer(containerRef.current, {
         terrain: Cesium.Terrain.fromWorldTerrain(),
+        homeButton: false,
         sceneModePicker: false,
         timeline: false,
         animation: false,
@@ -193,6 +225,7 @@ export default function CesiumMap() {
         // Blip (marker icon) - at tower tip
         blipMapRef.current[model.id] = viewer.entities.add({
           position: tipPos,
+          modelId: model.id,
           billboard: {
             image: BLIP_CONFIG.imageUrl,
             scale: BLIP_CONFIG.scale,
@@ -206,6 +239,7 @@ export default function CesiumMap() {
         // Label - at tower tip with pixel offset for visibility
         labelMapRef.current[model.id] = viewer.entities.add({
           position: tipPos,
+          modelId: model.id,
           label: {
             text: model.name,
             font: BLIP_CONFIG.labelFont,
@@ -215,6 +249,7 @@ export default function CesiumMap() {
             // Keep label visible even when geometry is in front.
             disableDepthTestDistance: Number.POSITIVE_INFINITY,
           },
+          show: false,
         });
       });
       
@@ -223,19 +258,20 @@ export default function CesiumMap() {
       console.log('✅ Labels created:', Object.keys(labelMapRef.current).length);
 
       const first = MODELS[0];
-       viewer.camera.setView({
+      homeViewRef.current = {
         destination: Cesium.Cartesian3.fromDegrees(
           first.lon,
           first.lat,
           CESIUM_CONFIG.INITIAL_ALTITUDE
-
         ),
-        orientation: { 
+        orientation: {
           heading: Cesium.Math.toRadians(0),
-          pitch: Cesium.Math.toRadians(-90), // Globe view from above
-          roll: 0.0
+          pitch: Cesium.Math.toRadians(-90),
+          roll: 0.0,
         },
-      });
+      };
+
+      viewer.camera.setView(homeViewRef.current);
 
 
       setEntitiesReady(true);
@@ -255,11 +291,11 @@ export default function CesiumMap() {
           if (!entity) return;
 
           if (blip) {
-            blip.show = true;
+            blip.show = !entity.show;
           }
 
           if (label) {
-            label.show = true;
+            label.show = false;
           }
 
           const modelPos = Cesium.Cartesian3.fromDegrees(
@@ -312,7 +348,60 @@ export default function CesiumMap() {
       viewer.cameraChangeListener = onCameraChange;
       viewer.camera.changed.addEventListener(onCameraChange);
       onCameraChange();
+
+      const clearHoveredBlipLabel = () => {
+        if (!hoveredBlipIdRef.current) return;
+
+        const previousLabel = labelMapRef.current[hoveredBlipIdRef.current];
+        if (previousLabel) {
+          previousLabel.show = false;
+        }
+
+        hoveredBlipIdRef.current = null;
+      };
+
+      const onMouseMove = (movement) => {
+        const picked = viewer.scene.pick(movement.endPosition);
+        const modelId = picked?.id?.modelId;
+
+        if (!modelId) {
+          clearHoveredBlipLabel();
+          return;
+        }
+
+        const entity = entityMapRef.current[modelId];
+        if (entity?.show) {
+          clearHoveredBlipLabel();
+          return;
+        }
+
+        if (hoveredBlipIdRef.current && hoveredBlipIdRef.current !== modelId) {
+          const previousLabel = labelMapRef.current[hoveredBlipIdRef.current];
+          if (previousLabel) {
+            previousLabel.show = false;
+          }
+        }
+
+        const label = labelMapRef.current[modelId];
+        if (label) {
+          label.show = true;
+          hoveredBlipIdRef.current = modelId;
+        }
+      };
+
+      viewer.screenSpaceEventHandler.setInputAction(
+        onMouseMove,
+        Cesium.ScreenSpaceEventType.MOUSE_MOVE
+      );
+
+      viewer.hoverClearLabel = clearHoveredBlipLabel;
       // ====== END ADDED ======
+
+      if (routeModelId && MODEL_LOOKUP[routeModelId]) {
+        setTimeout(() => {
+          flyToModel(routeModelId, { keepSidebarOpen: true });
+        }, 0);
+      }
 
       // --- Click Handler (parts + coords) ---
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -460,7 +549,7 @@ useEffect(() => {
 
 
   /* ---------------- FLY TO MODEL ---------------- */
-const flyToModel = (modelId) => {
+  const flyToModel = (modelId, options = {}) => {
     const viewer = viewerRef.current;
     const entity = entityMapRef.current[modelId];
     const model = MODEL_LOOKUP[modelId];
@@ -512,9 +601,56 @@ const flyToModel = (modelId) => {
       },
     });
     
-    setPanelOpen(false); 
+    if (!options.keepSidebarOpen) {
+      setPanelOpen(false);
+    }
     console.log(`📏 ${model.name} - Distance: ${Math.round(distance)}m, Target: ${Math.round(targetHeight)}m`);
   };
+
+  const goHome = () => {
+    const viewer = viewerRef.current;
+    if (!viewer || !homeViewRef.current) return;
+
+    setPartBubble(null);
+    setBubbleAnchor(null);
+    setTowerBubble(null);
+    setShowMiniViewer(false);
+    activeModelRef.current = null;
+
+    viewer.camera.flyTo({
+      ...homeViewRef.current,
+      duration: 1.6,
+      complete: () => {
+        if (viewer.cameraChangeListener) {
+          viewer.cameraChangeListener();
+        }
+
+        navigate("/", { replace: true });
+      },
+    });
+
+    setPanelOpen(true);
+  };
+
+  const openOverviewPanel = () => {
+    navigate("/?overview=1", { replace: true });
+    setPanelOpen(true);
+  };
+
+  useEffect(() => {
+    if (!entitiesReady || !routeModelId || !MODEL_LOOKUP[routeModelId]) return;
+
+    hasAutoFlewRef.current = false;
+
+    const timeoutId = window.setTimeout(() => {
+      if (hasAutoFlewRef.current) return;
+
+      hasAutoFlewRef.current = true;
+      flyToModel(routeModelId, { keepSidebarOpen: true });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [routeModelId, entitiesReady]);
 
   /* ---------------- ESC KEY TO CLOSE MINI VIEWER ---------------- */
   useEffect(() => {
@@ -542,12 +678,14 @@ const flyToModel = (modelId) => {
 
   return (
     <>
-      <LoadingScreen isVisible={isLoading3D} />
+      <LoadingScreen isVisible={isLoading3D} leftOffset={sidebarWidth} />
 
       <ModelsPanel
         models={MODELS}
         isOpen={panelOpen}
         onToggle={() => setPanelOpen((v) => !v)}
+        onHome={goHome}
+        onOverview={openOverviewPanel}
         onSelectModel={flyToModel}
       />
 
@@ -564,6 +702,228 @@ const flyToModel = (modelId) => {
         visible={Boolean(towerBubble)}
       />
 
+      {isOverviewOpen && (
+        <section
+          style={{
+            position: "fixed",
+            left: sidebarWidth + 16,
+            right: 16,
+            bottom: 16,
+            zIndex: 18,
+            borderRadius: 24,
+            background: "rgba(10, 10, 10, 0.96)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.42)",
+            backdropFilter: "blur(16px)",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: "48vh",
+            minHeight: 380,
+          }}
+        >
+          <div
+            style={{
+              padding: "18px 22px",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+            }}
+          >
+            <div>
+              <div style={{ color: "#a1a1a1", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em" }}>
+                Tower Overview
+              </div>
+              <h2 style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.2 }}>Tower overview</h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/", { replace: true })}
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.04)",
+                color: "#f5f5f5",
+                borderRadius: 999,
+                padding: "10px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              Close overview
+            </button>
+          </div>
+
+          <div
+            style={{
+              padding: "16px 22px 0",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <label
+              style={{
+                flex: "1 1 280px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px 14px",
+                borderRadius: 16,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <span style={{ color: "#a1a1a1", fontSize: 13 }}>Search</span>
+              <input
+                type="text"
+                value={overviewSearch}
+                onChange={(event) => setOverviewSearch(event.target.value)}
+                placeholder="Tower ID, location, type, or status"
+                aria-label="Search towers in overview"
+                style={{
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  color: "#f5f5f5",
+                  outline: "none",
+                  fontSize: 13,
+                }}
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => setOverviewSearch("")}
+              style={{
+                padding: "12px 16px",
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.04)",
+                color: "#f5f5f5",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              Clear
+            </button>
+
+            <div style={{ color: "#9a9a9a", fontSize: 13 }}>
+              {filteredOverviewRows.length} towers
+            </div>
+          </div>
+
+          <div style={{ overflow: "auto", flex: 1 }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "separate",
+                borderSpacing: 0,
+                minWidth: 920,
+              }}
+            >
+              <thead>
+                <tr>
+                  {["Tower ID", "Location", "Tower Type", "Status", "Actions"].map((heading) => (
+                    <th
+                      key={heading}
+                      style={{
+                        textAlign: "left",
+                        padding: "14px 18px",
+                        fontSize: 11,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.12em",
+                        color: "#9a9a9a",
+                        borderBottom: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOverviewRows.map((row) => {
+                  const isOffline = String(row.status).toLowerCase().includes("offline");
+                  const isMaintenance = String(row.status).toLowerCase().includes("maintenance");
+                  const tone = isOffline
+                    ? { bg: "rgba(255, 210, 120, 0.16)", fg: "#f7c76e" }
+                    : isMaintenance
+                    ? { bg: "rgba(255, 255, 255, 0.1)", fg: "#f5f5f5" }
+                    : { bg: "rgba(255,255,255,0.08)", fg: "#d9d9d9" };
+
+                  return (
+                    <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                      <td style={{ padding: "16px 18px", fontSize: 13, fontWeight: 700 }}>{row.model.id}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.location}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.type}</td>
+                      <td style={{ padding: "16px 18px" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            padding: "6px 10px",
+                            borderRadius: 999,
+                            background: tone.bg,
+                            color: tone.fg,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {row.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "16px 18px" }}>
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                          <Link
+                            to={`/${row.model.id}`}
+                            style={{
+                              color: "#f5f5f5",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              textDecoration: "underline",
+                              textUnderlineOffset: 3,
+                            }}
+                          >
+                            View map
+                          </Link>
+                          <Link
+                            to={`/model-viewer/${row.model.id}`}
+                            target="_blank"
+                            style={{
+                              color: "#f5f5f5",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              textDecoration: "underline",
+                              textUnderlineOffset: 3,
+                            }}
+                          >
+                            3D view
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {filteredOverviewRows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#9a9a9a" }}>
+                      No towers match your search.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {/* Floating View 3D Model Button */}
       {showViewModelButton && activeModelRef.current && (
         <button
@@ -573,11 +933,11 @@ const flyToModel = (modelId) => {
             bottom: 20,
             right: 20,
             padding: '14px 24px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
+            background: 'rgba(10, 10, 10, 0.92)',
+            color: '#f5f5f5',
             textDecoration: 'none',
             borderRadius: '12px',
-            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
             zIndex: 1000,
             fontSize: '14px',
             fontWeight: '600',
@@ -586,16 +946,16 @@ const flyToModel = (modelId) => {
             gap: '8px',
             transition: 'all 0.3s ease',
             backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             cursor: 'pointer',
           }}
           onMouseEnter={(e) => {
             e.target.style.transform = 'translateY(-2px)';
-            e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+            e.target.style.boxShadow = '0 14px 34px rgba(0,0,0,0.42)';
           }}
           onMouseLeave={(e) => {
             e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+            e.target.style.boxShadow = '0 10px 30px rgba(0,0,0,0.35)';
           }}
         >
           🔍 View 3D Model

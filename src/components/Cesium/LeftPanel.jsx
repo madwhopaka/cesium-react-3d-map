@@ -1,254 +1,285 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
 
-export default function ModelsPanel({ models, isOpen, onToggle, onSelectModel }) {
+export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOverview }) {
+  const location = useLocation();
+
+  const navItems = [
+    { label: "Home", to: "/", icon: "⌂" },
+    { label: "Tower Overview", to: "/?overview=1", icon: "▤" },
+    { label: "Tower Details", to: "/tower", icon: "◫" },
+  ];
+
+  const isHomeActive = location.pathname === "/";
+  const isTowersActive = location.pathname === "/" && new URLSearchParams(location.search).get("overview") === "1";
+  const isTowerDetailsActive = location.pathname === "/tower";
+
   return (
-    <div
+    <aside
       style={{
         position: "fixed",
-        top: 16,
-        left: 16,
-        zIndex: 10,
-
-        background: "rgba(15, 23, 42, 0.95)",
-        backdropFilter: "blur(12px)",
-
-        borderRadius: "12px",
-        border: "1px solid #334155",
-        boxShadow: "0 4px 24px rgba(0, 0, 0, 0.3)",
-
+        top: 0,
+        left: 0,
+        bottom: 0,
+        zIndex: 20,
+        width: isOpen ? 324 : 76,
+        background: "linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(6,6,6,0.96) 100%)",
+        color: "#f5f5f5",
+        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
+        boxShadow: "18px 0 60px rgba(0, 0, 0, 0.38)",
+        backdropFilter: "blur(16px)",
         overflow: "hidden",
-
-        /* Compact width */
-        width: isOpen ? "240px" : "48px",
-        transform: isOpen
-          ? "translateX(0) scale(1)"
-          : "translateX(0) scale(0.98)",
-
-        opacity: isOpen ? 1 : 0.95,
-
-        transition: `
-          width 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
-          transform 320ms ease-out,
-          opacity 220ms ease-out
-        `,
-
-        willChange: "width, transform, opacity",
-
-        maxHeight: "calc(100vh - 32px)",
+        transition:
+          "width 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 240ms ease, opacity 240ms ease",
+        opacity: 1,
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* Header */}
       <div
         style={{
-          padding: "12px",
-          borderBottom: isOpen ? "1px solid #334155" : "none",
+          padding: isOpen ? "18px 18px 16px" : "18px 12px",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: isOpen ? "space-between" : "center",
+          gap: 12,
         }}
       >
-        {isOpen && (
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        {isOpen ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
             <div
               style={{
-                width: "28px",
-                height: "28px",
-                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                borderRadius: "6px",
+                width: 40,
+                height: 40,
+                borderRadius: 14,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "14px",
+                background: "linear-gradient(180deg, #ffffff 0%, #cfcfcf 100%)",
+                color: "#0a0a0a",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)",
+                flexShrink: 0,
+                fontSize: 18,
               }}
             >
               🗼
             </div>
-            <h3
-              style={{
-                margin: 0,
-                color: "#fff",
-                fontSize: "14px",
-                fontWeight: 600,
-              }}
-            >
-              Models
-            </h3>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.2, lineHeight: 1.2 }}>
+                Quick Menu
+              </div>
+              <div style={{ fontSize: 12, color: "#a1a1a1", marginTop: 4 }}>
+                Search and jump between towers
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "linear-gradient(180deg, #ffffff 0%, #cfcfcf 100%)",
+              color: "#0a0a0a",
+              fontSize: 18,
+            }}
+          >
+            🗼
           </div>
         )}
-        
+
         <button
           onClick={onToggle}
+          aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           style={{
-            background: isOpen ? "#1e293b" : "transparent",
-            border: "1px solid #334155",
-            borderRadius: "6px",
-            width: "28px",
-            height: "28px",
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            border: "1px solid rgba(255, 255, 255, 0.12)",
+            background: "rgba(255, 255, 255, 0.04)",
+            color: "#e5e5e5",
+            cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#94a3b8",
-            cursor: "pointer",
-            fontSize: "14px",
-            transition: "all 0.2s",
-            marginLeft: isOpen ? 0 : "auto",
-            marginRight: isOpen ? 0 : "auto",
+            fontSize: 14,
+            transition: "background 180ms ease, transform 180ms ease",
+            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
-            e.target.style.background = "#334155";
-            e.target.style.color = "#fff";
+            e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+            e.currentTarget.style.transform = "translateY(-1px)";
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = isOpen ? "#1e293b" : "transparent";
-            e.target.style.color = "#94a3b8";
+            e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
+            e.currentTarget.style.transform = "translateY(0)";
           }}
-          aria-label={isOpen ? "Collapse panel" : "Expand panel"}
         >
           {isOpen ? "⟨" : "⟩"}
         </button>
       </div>
 
-      {/* Model List */}
       {isOpen && (
-        <div
-          style={{
-            padding: "12px",
-            maxHeight: "calc(100vh - 100px)",
-            overflowY: "auto",
-          }}
-        >
-          <div style={{ marginBottom: "6px" }}>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                color: "#64748b",
-              }}
-            >
-              Available Towers
-            </span>
-          </div>
-          
-          {models.map((model, index) => (
-            <div
-              key={model.id}
-              style={{
-                marginBottom: index < models.length - 1 ? "6px" : 0,
-                background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                overflow: "hidden",
-                transition: "all 0.2s",
-              }}
-            >
-              {/* Fly to Tower Button */}
-              <button
-                onClick={() => onSelectModel(model.id)}
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "rgba(59, 130, 246, 0.05)";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "transparent";
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14, minHeight: 0, flex: 1 }}>
+          <nav style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {navItems.map((item) => {
+              const isActive =
+                (item.to === "/" && isHomeActive && new URLSearchParams(location.search).get("overview") !== "1") ||
+                (item.to === "/?overview=1" && isTowersActive) ||
+                (item.to === "/tower" && isTowerDetailsActive);
+
+              if (item.to === "/" && onHome) {
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={onHome}
                     style={{
-                      width: "32px",
-                      height: "32px",
-                      background: "rgba(59, 130, 246, 0.1)",
-                      border: "1px solid rgba(59, 130, 246, 0.3)",
-                      borderRadius: "6px",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "16px",
-                      flexShrink: 0,
+                      gap: 12,
+                      padding: "12px 14px",
+                      borderRadius: 16,
+                      textDecoration: "none",
+                      color: isActive ? "#050505" : "#f5f5f5",
+                      background: isActive
+                        ? "linear-gradient(180deg, #f5f5f5 0%, #d9d9d9 100%)"
+                        : "rgba(255,255,255,0.04)",
+                      border: isActive
+                        ? "1px solid rgba(255,255,255,0.7)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                      boxShadow: isActive ? "0 14px 26px rgba(0,0,0,0.32)" : "none",
+                      transition: "transform 180ms ease, background 180ms ease",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateX(2px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateX(0)";
                     }}
                   >
-                    📡
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        color: "#fff",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        marginBottom: "2px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {model.name}
-                    </div>
-                    <div
-                      style={{
-                        color: "#64748b",
-                        fontSize: "10px",
-                      }}
-                    >
-                      {model.lat.toFixed(4)}°, {model.lon.toFixed(4)}°
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      color: "#3b82f6",
-                      fontSize: "16px",
-                      opacity: 0.6,
-                    }}
-                  >
-                    →
-                  </div>
-                </div>
-              </button>
+                    <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>
+                  </button>
+                );
+              }
 
-              {/* View 3D Model Link */}
-              <Link
-                to={`/model-viewer/${model.id}`}
-                target='_blank'
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "5px",
-                  width: "100%",
-                  padding: "8px 10px",
-                  background: "rgba(59, 130, 246, 0.08)",
-                  borderTop: "1px solid rgba(59, 130, 246, 0.15)",
-                  color: "#60a5fa",
-                  textDecoration: "none",
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "rgba(59, 130, 246, 0.15)";
-                  e.target.style.color = "#93c5fd";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "rgba(59, 130, 246, 0.08)";
-                  e.target.style.color = "#60a5fa";
-                }}
-              >
-                <span style={{ fontSize: "12px" }}>🔍</span>
-                View 3D Model
-              </Link>
+              if (item.to === "/?overview=1" && onOverview) {
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={onOverview}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 14px",
+                      borderRadius: 16,
+                      textDecoration: "none",
+                      color: isActive ? "#050505" : "#f5f5f5",
+                      background: isActive
+                        ? "linear-gradient(180deg, #f5f5f5 0%, #d9d9d9 100%)"
+                        : "rgba(255,255,255,0.04)",
+                      border: isActive
+                        ? "1px solid rgba(255,255,255,0.7)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                      boxShadow: isActive ? "0 14px 26px rgba(0,0,0,0.32)" : "none",
+                      transition: "transform 180ms ease, background 180ms ease",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateX(2px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateX(0)";
+                    }}
+                  >
+                    <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>
+                  </button>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 14px",
+                    borderRadius: 16,
+                    textDecoration: "none",
+                    color: isActive ? "#050505" : "#f5f5f5",
+                    background: isActive
+                      ? "linear-gradient(180deg, #f5f5f5 0%, #d9d9d9 100%)"
+                      : "rgba(255,255,255,0.04)",
+                    border: isActive
+                      ? "1px solid rgba(255,255,255,0.7)"
+                      : "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: isActive ? "0 14px 26px rgba(0,0,0,0.32)" : "none",
+                    transition: "transform 180ms ease, background 180ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateX(2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateX(0)";
+                  }}
+                >
+                  <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div
+            style={{
+              marginTop: 4,
+              padding: 14,
+              borderRadius: 18,
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <div style={{ color: "#a1a1a1", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+              Tower Details
             </div>
-          ))}
+            <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.6, color: "#f5f5f5" }}>
+              Browse tower metrics, search the list, and open the map or 3D viewer.
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.08)", fontSize: 11 }}>
+                {models?.length ?? 0} towers
+              </span>
+              <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,0.08)", fontSize: 11 }}>
+                Black &amp; white
+              </span>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+
+      {!isOpen && (
+        <div style={{ padding: "18px 12px", display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
+          <div style={{ color: "#a1a1a1", fontSize: 11, writingMode: "vertical-rl", transform: "rotate(180deg)", letterSpacing: "0.14em" }}>
+            TOWERS
+          </div>
+          <div style={{ width: 32, height: 1, background: "rgba(255,255,255,0.12)" }} />
+          <div style={{ color: "#f5f5f5", fontSize: 12, fontWeight: 700 }}>{models.length}</div>
+        </div>
+      )}
+    </aside>
   );
 }

@@ -1,4 +1,4 @@
-export default function LoadingScreen({ isVisible }) {
+export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
   if (!isVisible) return null;
 
   return (
@@ -20,7 +20,10 @@ export default function LoadingScreen({ isVisible }) {
       <div
         style={{
           position: "fixed",
-          inset: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: leftOffset,
           zIndex: 9999,
           background: "#000",
           display: "flex",
@@ -35,7 +38,7 @@ export default function LoadingScreen({ isVisible }) {
             width: "80px",
             height: "80px",
             border: "4px solid #1a1a1a",
-            borderTop: "4px solid #3b82f6",
+            borderTop: "4px solid #f5f5f5",
             borderRadius: "50%",
             animation: "spin 1s linear infinite",
             marginBottom: "24px",
