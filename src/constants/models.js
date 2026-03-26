@@ -12,7 +12,7 @@ export const MODELS = [
     name: "Tower SICA001946, Monopole",
     lon: 135.502121,
     lat: 34.693735,
-    altitude: 92,
+    altitude: 90,
     towerHeight: 30,
     scale: 2.1,
     blipColor: "#f5f5f5",
