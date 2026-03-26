@@ -292,7 +292,7 @@ export default function CesiumMap() {
           if (!entity) return;
 
           if (blip) {
-            blip.show = !entity.show;
+            blip.show = true;
           }
 
           if (label) {
