@@ -14,8 +14,6 @@ export default function PartBubble({ bubble, anchor, onClose }) {
     anchorY: anchor?.y,
   });
 
-  console.log(bubble, 'bubble');
-
   useEffect(() => {
     if (!bubble) return;
 

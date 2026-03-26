@@ -5,7 +5,6 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 
 import LoadingScreen from "./Cesium/LoadingScreen";
 import ModelsPanel from "./Cesium/LeftPanel";
-import PartModal from "./Cesium/PartsModal";
 
 import { MODELS, MODEL_LOOKUP } from "../constants/models";
 import {
@@ -16,6 +15,7 @@ import {
 } from "../constants/config";
 import { normalizeNodeName } from "../helpers/helper";
 import PartBubble from "./Cesium/PartsModal";
+import TowerBubble from "./Cesium/TowerModal";
 
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
@@ -47,6 +47,7 @@ export default function CesiumMap() {
   const [activeModal, setActiveModal] = useState(null);
   const [partBubble, setPartBubble] = useState(null);
   const [bubbleAnchor, setBubbleAnchor] = useState(null);
+  const [towerBubble, setTowerBubble] = useState(null);
   const [isLoading3D, setIsLoading3D] = useState(false);
   const [entitiesReady, setEntitiesReady] = useState(false);
   const [showViewModelButton, setShowViewModelButton] = useState(false);
@@ -295,11 +296,15 @@ export default function CesiumMap() {
         if (closestDistance < BUTTON_SHOW_THRESHOLD) {
           // Close to a model - show button and update reference
           activeModelRef.current = closestModel;
+          setTowerBubble(closestModel);
           setShowViewModelButton(true);
         } else if (closestDistance > BUTTON_HIDE_THRESHOLD) {
           // Far from all models (globe view) - hide button
           setShowViewModelButton(false);
           activeModelRef.current = null;
+          setTowerBubble(null);
+        } else {
+          setTowerBubble(null);
         }
       };
 
@@ -471,6 +476,7 @@ const flyToModel = (modelId) => {
     
     entity.show = true;
     activeModelRef.current = model;
+    setTowerBubble(model);
     isFlyingRef.current = true;
     
     // Target upper-mid tower so the whole structure remains visible in frame.
@@ -551,6 +557,11 @@ const flyToModel = (modelId) => {
         bubble={partBubble}
         anchor={bubbleAnchor}
         onClose={() => setPartBubble(null)}
+      />
+
+      <TowerBubble
+        tower={towerBubble}
+        visible={Boolean(towerBubble)}
       />
 
       {/* Floating View 3D Model Button */}
