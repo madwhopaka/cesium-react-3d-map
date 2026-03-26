@@ -62,15 +62,15 @@ export default function CesiumMap() {
   const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
-    return new URLSearchParams(location.search).get("overview") === "1";
-  }, [location.search]);
+    return location.pathname === "/";
+  }, [location.pathname]);
 
   const overviewRows = useMemo(() => {
     return MODELS.map((model) => ({
       model,
       type: model.towerSpecs?.type || "-",
       location: model.towerSpecs?.location || model.towerSpecs?.region || "Site",
-      status: model.towerSpecs?.maintenance || "Active",
+      status: model.status || model.towerSpecs?.maintenance || "Active",
     }));
   }, []);
 
@@ -96,6 +96,7 @@ export default function CesiumMap() {
     const init = async () => {
       viewer = new Cesium.Viewer(containerRef.current, {
         terrain: Cesium.Terrain.fromWorldTerrain(),
+        creditContainer: document.createElement("div"),
         homeButton: false,
         sceneModePicker: false,
         timeline: false,
@@ -633,7 +634,7 @@ useEffect(() => {
   };
 
   const openOverviewPanel = () => {
-    navigate("/?overview=1", { replace: true });
+    navigate("/", { replace: true });
     setPanelOpen(true);
   };
 
@@ -689,7 +690,20 @@ useEffect(() => {
         onSelectModel={flyToModel}
       />
 
-      <div ref={containerRef} style={{ position: "fixed", inset: 0 }} />
+      <div
+        ref={containerRef}
+        style={{
+          position: "fixed",
+          top: isOverviewOpen ? 12 : 0,
+          left: isOverviewOpen ? sidebarWidth + 12 : sidebarWidth,
+          right: isOverviewOpen ? 12 : 0,
+          bottom: isOverviewOpen ? "calc(50vh + 8px)" : 0,
+          border: isOverviewOpen ? "1px solid rgba(255,255,255,0.12)" : "none",
+          borderRadius: isOverviewOpen ? 18 : 0,
+          boxSizing: "border-box",
+          overflow: "hidden",
+        }}
+      />
 
       <PartBubble
         bubble={partBubble}
@@ -707,11 +721,12 @@ useEffect(() => {
         <section
           style={{
             position: "fixed",
-            left: sidebarWidth + 16,
-            right: 16,
-            bottom: 16,
+            left: sidebarWidth,
+            right: 0,
+            top: "50vh",
+            bottom: 0,
             zIndex: 18,
-            borderRadius: 24,
+            borderRadius: 0,
             background: "#1F1C1C",
             border: "1px solid rgba(255,255,255,0.06)",
             boxShadow: "0 20px 50px rgba(0,0,0,0.28)",
@@ -719,38 +734,34 @@ useEffect(() => {
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
-            maxHeight: "48vh",
-            minHeight: 380,
+            minHeight: 0,
           }}
         >
           <div
             style={{
-              padding: "18px 22px",
+              padding: "12px 16px",
               borderBottom: "1px solid rgba(255,255,255,0.06)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 16,
+              gap: 12,
             }}
           >
             <div>
-              <div style={{ color: "#b0a7a7", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.14em" }}>
-                Tower Overview
-              </div>
-              <h2 style={{ margin: "6px 0 0", fontSize: 20, lineHeight: 1.2 }}>Tower overview</h2>
+              <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2 }}>Tower overview</h2>
             </div>
 
             <button
               type="button"
-              onClick={() => navigate("/", { replace: true })}
+              onClick={() => navigate("/map", { replace: true })}
               style={{
                 border: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.03)",
                 color: "#f5f5f5",
                 borderRadius: 999,
-                padding: "10px 14px",
+                padding: "8px 12px",
                 cursor: "pointer",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 700,
               }}
             >
@@ -760,10 +771,10 @@ useEffect(() => {
 
           <div
             style={{
-              padding: "16px 22px 0",
+              padding: "10px 16px 0",
               display: "flex",
               alignItems: "center",
-              gap: 12,
+              gap: 10,
               flexWrap: "wrap",
             }}
           >
@@ -772,9 +783,9 @@ useEffect(() => {
                 flex: "1 1 280px",
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                padding: "12px 14px",
-                borderRadius: 16,
+                gap: 8,
+                padding: "10px 12px",
+                borderRadius: 12,
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.06)",
               }}
@@ -801,13 +812,13 @@ useEffect(() => {
               type="button"
               onClick={() => setOverviewSearch("")}
               style={{
-                padding: "12px 16px",
+                padding: "10px 14px",
                 borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.06)",
                 background: "rgba(255,255,255,0.03)",
                 color: "#f5f5f5",
                 cursor: "pointer",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 700,
               }}
             >
@@ -852,11 +863,14 @@ useEffect(() => {
                 {filteredOverviewRows.map((row) => {
                   const isOffline = String(row.status).toLowerCase().includes("offline");
                   const isMaintenance = String(row.status).toLowerCase().includes("maintenance");
+                  const isActive = String(row.status).toLowerCase().includes("active");
                   const tone = isOffline
-                    ? { bg: "rgba(255, 210, 120, 0.12)", fg: "#f7c76e" }
+                    ? { bg: "rgba(245, 158, 11, 0.18)", fg: "#f59e0b", border: "rgba(245, 158, 11, 0.28)" }
                     : isMaintenance
-                    ? { bg: "rgba(255, 255, 255, 0.06)", fg: "#f5f5f5" }
-                    : { bg: "rgba(255,255,255,0.05)", fg: "#d9d9d9" };
+                    ? { bg: "rgba(239, 68, 68, 0.18)", fg: "#ef4444", border: "rgba(239, 68, 68, 0.28)" }
+                    : isActive
+                    ? { bg: "rgba(34, 197, 94, 0.18)", fg: "#22c55e", border: "rgba(34, 197, 94, 0.28)" }
+                    : { bg: "rgba(148, 163, 184, 0.16)", fg: "#cbd5e1", border: "rgba(148, 163, 184, 0.26)" };
 
                   return (
                     <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -868,12 +882,16 @@ useEffect(() => {
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            padding: "6px 10px",
+                            padding: "6px 11px",
                             borderRadius: 999,
                             background: tone.bg,
                             color: tone.fg,
+                            border: `1px solid ${tone.border}`,
                             fontSize: 12,
                             fontWeight: 700,
+                            letterSpacing: "0.02em",
+                            textTransform: "capitalize",
+                            boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
                           }}
                         >
                           {row.status}
@@ -882,7 +900,7 @@ useEffect(() => {
                       <td style={{ padding: "16px 18px" }}>
                         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                           <Link
-                            to={`/${row.model.id}`}
+                            to={`/map/${row.model.id}`}
                             style={{
                               color: "#f5f5f5",
                               fontSize: 12,

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route, useParams } from 'react-router-dom';
 import './App.css';
 import CesiumMap from './components/CesiumBox';
 import ModelViewer from './components/ModelViewer';
@@ -9,11 +9,15 @@ const App = () => {
     <BrowserRouter>
       <div className="App">
         <Routes>
-          {/* Main map view */}
+          {/* Home overview */}
           <Route path="/" element={<CesiumMap />} />
 
-          {/* Direct tower route (e.g. /204312) */}
-          <Route path="/:modelId" element={<CesiumMap />} />
+          {/* Full-screen map */}
+          <Route path="/map" element={<CesiumMap />} />
+          <Route path="/map/:modelId" element={<CesiumMap />} />
+
+          {/* Legacy direct tower route redirects to the new map path */}
+          <Route path="/:modelId" element={<LegacyTowerRedirect />} />
 
           {/* Towers dashboard */}
           <Route path="/towers" element={<TowersPage />} />
@@ -28,3 +32,9 @@ const App = () => {
 };
 
 export default App;
+
+function LegacyTowerRedirect() {
+  const { modelId } = useParams();
+
+  return <Navigate replace to={`/map/${modelId}`} />;
+}

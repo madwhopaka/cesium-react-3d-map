@@ -1,17 +1,104 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Home, Map, RadioTower, TriangleAlert, LayoutDashboard, ChevronLeft } from "lucide-react";
 
 export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOverview }) {
   const location = useLocation();
+  const [pendingActiveItem, setPendingActiveItem] = useState(null);
+
+  useEffect(() => {
+    setPendingActiveItem(null);
+  }, [location.pathname, location.search]);
 
   const navItems = [
-    { label: "Home", to: "/", icon: "⌂" },
-    { label: "Tower Overview", to: "/?overview=1", icon: "▤" },
-    { label: "Tower Details", to: "/tower", icon: "/images/icon-tower.png" },
+    { label: "Overview", kind: "action", onClick: onOverview, icon: Home, active: () => location.pathname === "/" || location.pathname === "/towers" },
+    { label: "Maps", kind: "link", to: "/map", icon: Map, active: () => location.pathname === "/map" || location.pathname.startsWith("/map/") },
+    { label: "Tower Details", kind: "link", to: "/towers", icon: RadioTower, active: () => location.pathname === "/towers" || location.pathname === "/tower" },
+    { label: "Maintenance Activity", kind: "disabled", icon: TriangleAlert },
+    { label: "Dashboard", kind: "disabled", icon: LayoutDashboard },
   ];
 
-  const isHomeActive = location.pathname === "/";
-  const isTowersActive = location.pathname === "/" && new URLSearchParams(location.search).get("overview") === "1";
-  const isTowerDetailsActive = location.pathname === "/tower";
+  const getIcon = (IconComponent) => <IconComponent size={18} strokeWidth={2.1} />;
+
+  const renderItem = (item, isCollapsed = false) => {
+    const isActive = pendingActiveItem ? pendingActiveItem === item.label : item.active ? item.active() : false;
+    const sharedStyle = {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      padding: isCollapsed ? 0 : "12px 14px",
+      borderRadius: isCollapsed ? 14 : 16,
+      textDecoration: "none",
+      color: isActive ? "#ffffff" : "#b0a7a7",
+      background: isActive ? "#2a2424" : "transparent",
+      border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
+      boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
+      transition: "transform 180ms ease, background 180ms ease, opacity 180ms ease",
+      cursor: item.kind === "disabled" ? "not-allowed" : "pointer",
+      width: isCollapsed ? 40 : "100%",
+      height: isCollapsed ? 40 : "auto",
+      justifyContent: isCollapsed ? "center" : "flex-start",
+      opacity: item.kind === "disabled" ? 0.55 : 1,
+      pointerEvents: item.kind === "disabled" ? "none" : "auto",
+      textAlign: "left",
+    };
+
+    const iconElement = getIcon(item.icon);
+
+    if (item.kind === "action") {
+      return (
+        <button
+          key={item.label}
+          type="button"
+          onClick={() => {
+            setPendingActiveItem(item.label);
+            item.onClick?.();
+          }}
+          title={item.label}
+          aria-label={item.label}
+          style={sharedStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateX(2px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateX(0)";
+          }}
+        >
+          {iconElement}
+          {!isCollapsed && <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>}
+        </button>
+      );
+    }
+
+    if (item.kind === "disabled") {
+      return (
+        <button key={item.label} type="button" disabled title={item.label} aria-label={item.label} style={sharedStyle}>
+          {iconElement}
+          {!isCollapsed && <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>}
+        </button>
+      );
+    }
+
+    return (
+      <Link
+        key={item.label}
+        to={item.to}
+        title={item.label}
+        aria-label={item.label}
+        onClick={() => setPendingActiveItem(item.label)}
+        style={sharedStyle}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateX(2px)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateX(0)";
+        }}
+      >
+        {iconElement}
+        {!isCollapsed && <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>}
+      </Link>
+    );
+  };
 
   return (
     <aside
@@ -136,119 +223,7 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
       {isOpen && (
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14, minHeight: 0, flex: 1 }}>
           <nav style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {navItems.map((item) => {
-              const isActive =
-                (item.to === "/" && isHomeActive && new URLSearchParams(location.search).get("overview") !== "1") ||
-                (item.to === "/?overview=1" && isTowersActive) ||
-                (item.to === "/tower" && isTowerDetailsActive);
-
-              if (item.to === "/" && onHome) {
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={onHome}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                      borderRadius: 16,
-                      textDecoration: "none",
-                      color: isActive ? "#ffffff" : "#b0a7a7",
-                      background: isActive ? "#2a2424" : "transparent",
-                      border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
-                      boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
-                      transition: "transform 180ms ease, background 180ms ease",
-                      cursor: "pointer",
-                      width: "100%",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateX(2px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateX(0)";
-                    }}
-                  >
-                    <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>
-                  </button>
-                );
-              }
-
-              if (item.to === "/?overview=1" && onOverview) {
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={onOverview}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                      borderRadius: 16,
-                      textDecoration: "none",
-                      color: isActive ? "#ffffff" : "#b0a7a7",
-                      background: isActive ? "#2a2424" : "transparent",
-                      border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
-                      boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
-                      transition: "transform 180ms ease, background 180ms ease",
-                      cursor: "pointer",
-                      width: "100%",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateX(2px)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateX(0)";
-                    }}
-                  >
-                    <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>
-                  </button>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.label}
-                  to={item.to}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "12px 14px",
-                    borderRadius: 16,
-                    textDecoration: "none",
-                    color: isActive ? "#ffffff" : "#b0a7a7",
-                    background: isActive ? "#2a2424" : "transparent",
-                    border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
-                    boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
-                    transition: "transform 180ms ease, background 180ms ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateX(2px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateX(0)";
-                  }}
-                >
-                  {item.icon.startsWith("/images/") ? (
-                    <img
-                      src={item.icon}
-                      alt={item.label}
-                      style={{ width: 18, height: 18, objectFit: "contain", flexShrink: 0 }}
-                    />
-                  ) : (
-                    <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
-                  )}
-                  <span style={{ fontSize: 14, fontWeight: 700 }}>{item.label}</span>
-                </Link>
-              );
-            })}
+            {navItems.map((item) => renderItem(item, false))}
           </nav>
 
           <div
@@ -280,59 +255,7 @@ export default function ModelsPanel({ models, isOpen, onToggle, onHome, onOvervi
 
       {!isOpen && (
         <div style={{ padding: "14px 10px", display: "flex", flexDirection: "column", gap: 10, alignItems: "center", flex: 1 }}>
-          {navItems.map((item) => {
-            const isActive =
-              (item.to === "/" && isHomeActive && new URLSearchParams(location.search).get("overview") !== "1") ||
-              (item.to === "/?overview=1" && isTowersActive) ||
-              (item.to === "/tower" && isTowerDetailsActive);
-
-            const IconContent = item.icon.startsWith("/images/") ? (
-              <img
-                src={item.icon}
-                alt={item.label}
-                style={{ width: 18, height: 18, objectFit: "contain" }}
-              />
-            ) : (
-              <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
-            );
-
-            const commonStyle = {
-              width: 40,
-              height: 40,
-              borderRadius: 14,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: isActive ? "#2a2424" : "transparent",
-              border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
-              color: "#f5f5f5",
-              cursor: "pointer",
-              padding: 0,
-              boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
-            };
-
-            if (item.to === "/" && onHome) {
-              return (
-                <button key={item.label} type="button" onClick={onHome} title={item.label} aria-label={item.label} style={commonStyle}>
-                  {IconContent}
-                </button>
-              );
-            }
-
-            if (item.to === "/?overview=1" && onOverview) {
-              return (
-                <button key={item.label} type="button" onClick={onOverview} title={item.label} aria-label={item.label} style={commonStyle}>
-                  {IconContent}
-                </button>
-              );
-            }
-
-            return (
-              <Link key={item.label} to={item.to} title={item.label} aria-label={item.label} style={commonStyle}>
-                {IconContent}
-              </Link>
-            );
-          })}
+          {navItems.map((item) => renderItem(item, true))}
         </div>
       )}
 
