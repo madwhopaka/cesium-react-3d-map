@@ -19,7 +19,10 @@ import TowerBubble from "./Cesium/TowerModal";
 
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
-export default function CesiumMap() {
+export default function CesiumMap({
+  renderProfile: controlledRenderProfile,
+  onRenderProfileChange,
+}) {
   const HOVER_CARD_WIDTH = 236;
   const HOVER_CARD_HEIGHT = 112;
   const HOVER_CARD_GAP = 1;
@@ -65,9 +68,16 @@ export default function CesiumMap() {
   const [hoverBlipCard, setHoverBlipCard] = useState(null);
   const [isHoverBlipCardVisible, setIsHoverBlipCardVisible] = useState(false);
   const [overviewSearch, setOverviewSearch] = useState("");
-  const [renderProfile, setRenderProfile] = useState("balanced");
+  const [localRenderProfile, setLocalRenderProfile] = useState("balanced");
+  const renderProfile =
+    typeof controlledRenderProfile === "string" ? controlledRenderProfile : localRenderProfile;
+  const setRenderProfile =
+    typeof onRenderProfileChange === "function"
+      ? onRenderProfileChange
+      : setLocalRenderProfile;
   const cloudLayerRef = useRef(null); // Track cloud layer entity
   const hoverCardHideTimeoutRef = useRef(null);
+  const previousPathRef = useRef(location.pathname);
   const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
@@ -180,6 +190,7 @@ export default function CesiumMap() {
       viewer = new Cesium.Viewer(containerRef.current, {
         terrain: Cesium.Terrain.fromWorldTerrain(),
         creditContainer: document.createElement("div"),
+        fullscreenButton: false,
         homeButton: false,
         sceneModePicker: false,
         timeline: false,
@@ -752,10 +763,47 @@ useEffect(() => {
     setPanelOpen(true);
   };
 
+  const resetToInitialGlobeView = () => {
+    const viewer = viewerRef.current;
+    if (!viewer || !homeViewRef.current) return;
+
+    setPartBubble(null);
+    setBubbleAnchor(null);
+    setTowerBubble(null);
+    setShowMiniViewer(false);
+    activeModelRef.current = null;
+
+    viewer.camera.setView(homeViewRef.current);
+
+    if (viewer.cameraChangeListener) {
+      viewer.cameraChangeListener();
+    }
+
+    viewer.scene.requestRender();
+  };
+
   const openOverviewPanel = () => {
     navigate("/", { replace: true });
     setPanelOpen(true);
   };
+
+  useEffect(() => {
+    const previousPath = previousPathRef.current;
+    const currentPath = location.pathname;
+
+    const isOverviewRoute = (path) => path === "/";
+    const isMapRoute = (path) => path === "/map" || path.startsWith("/map/");
+
+    const switchedBetweenOverviewAndMap =
+      (isOverviewRoute(previousPath) && isMapRoute(currentPath)) ||
+      (isMapRoute(previousPath) && isOverviewRoute(currentPath));
+
+    if (switchedBetweenOverviewAndMap) {
+      resetToInitialGlobeView();
+    }
+
+    previousPathRef.current = currentPath;
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!entitiesReady || !routeModelId || !MODEL_LOOKUP[routeModelId]) return;
@@ -935,7 +983,7 @@ useEffect(() => {
         isOpen={panelOpen}
         onToggle={() => setPanelOpen((v) => !v)}
         onHome={goHome}
-        onOverview={openOverviewPanel}
+        onOverview={goHome}
         onSelectModel={flyToModel}
         renderProfile={renderProfile}
         renderProfileLabel={RENDER_PRESETS[renderProfile].label}
@@ -957,6 +1005,44 @@ useEffect(() => {
           overflow: "hidden",
         }}
       />
+
+      {isOverviewOpen ? (
+        <button
+          type="button"
+          onClick={() => navigate("/map", { replace: true })}
+          title="Expand map to full view"
+          aria-label="Expand map to full view"
+          style={{
+            position: "fixed",
+            top: 24,
+            right: 24,
+            zIndex: 30,
+            width: 42,
+            height: 42,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.16)",
+            background: "rgba(28,27,27,0.72)",
+            backdropFilter: "blur(8px)",
+            color: "#f5f5f5",
+            cursor: "pointer",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+            <path d="M8 3H3V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3 3L10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M16 3H21V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M21 3L14 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8 21H3V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3 21L10 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M16 21H21V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M21 21L14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      ) : null}
 
       <PartBubble
         bubble={partBubble}
