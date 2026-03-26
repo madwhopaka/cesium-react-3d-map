@@ -8,6 +8,7 @@ export default function ModelsPanel({
   onToggle,
   onHome,
   onOverview,
+  onMap,
   renderProfile = "balanced",
   renderProfileLabel = "Balanced",
   onCycleRenderProfile,
@@ -22,7 +23,14 @@ export default function ModelsPanel({
 
   const navItems = [
     { label: "Overview", kind: "action", onClick: onOverview, icon: Home, active: () => location.pathname === "/" || location.pathname === "/towers" },
-    { label: "Maps", kind: "link", to: "/map", icon: Map, active: () => location.pathname === "/map" || location.pathname.startsWith("/map/") },
+    {
+      label: "Maps",
+      kind: onMap ? "action" : "link",
+      to: "/map",
+      onClick: onMap,
+      icon: Map,
+      active: () => location.pathname === "/map" || location.pathname.startsWith("/map/"),
+    },
     { label: "Tower Details", kind: "link", to: "/towers", icon: RadioTower, active: () => location.pathname === "/towers" || location.pathname === "/tower" },
     { label: "Maintenance Activity", kind: "disabled", icon: TriangleAlert },
     { label: "Dashboard", kind: "disabled", icon: LayoutDashboard },
