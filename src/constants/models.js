@@ -14,7 +14,7 @@ export const MODELS = [
     lat: 34.693735,
     altitude: 92,
     towerHeight: 30,
-    scale: 1.4,
+    scale: 2.1,
     uri: "/models/SICA001946.glb",
     towerSpecs: {
       type: "Monopole",
@@ -275,7 +275,7 @@ export const MODELS = [
     lat: 36.646417,
     altitude: 468,
     towerHeight: 45,
-    scale: 1,
+    scale: 0.7,
     uri: "/models/204312.glb",
     towerSpecs: {
       type: "Lattice",

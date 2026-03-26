@@ -6,8 +6,7 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { MODEL_LOOKUP } from "../constants/models";
-import { normalizeNodeName } from "../helpers/helper";
-import PartBubble from "./Cesium/PartsModal";
+import TowerBubble from "./Cesium/TowerModal";
 
 export default function ModelViewer() {
   const { modelId } = useParams();
@@ -17,17 +16,10 @@ export default function ModelViewer() {
   const rendererRef = useRef(null);
   const controlsRef = useRef(null);
   const modelRef = useRef(null);
-  const raycasterRef = useRef(new THREE.Raycaster());
-  const mouseRef = useRef(new THREE.Vector2());
-  
-  // Track if user is actively interacting to prevent premature bubble clearing
-  const isUserInteractingRef = useRef(false);
-  const bubbleSetTimeRef = useRef(0);
   const modelLoadedRef = useRef(false);
 
   const model = MODEL_LOOKUP[modelId];
-  const [partBubble, setPartBubble] = useState(null);
-  const [bubbleAnchor, setBubbleAnchor] = useState(null);
+  const [isTowerBubbleVisible, setIsTowerBubbleVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isInIframe, setIsInIframe] = useState(false);
 
@@ -53,12 +45,10 @@ export default function ModelViewer() {
   useEffect(() => {
     if (!model) return;
 
-    // Scene setup with off-white background
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#bdbdbd');
     sceneRef.current = scene;
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(
       50,
       containerRef.current.clientWidth / containerRef.current.clientHeight,
@@ -68,7 +58,6 @@ export default function ModelViewer() {
     camera.position.set(100, 100, 100);
     cameraRef.current = camera;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -80,17 +69,16 @@ export default function ModelViewer() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    
+
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
     renderer.domElement.style.left = '0';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
-    
+
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
@@ -107,61 +95,29 @@ export default function ModelViewer() {
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
-    
+
     new RGBELoader()
-      .setPath("/hdr/") // folder where your .hdr lives
-      .load("simple-light.hdr", (hdrTexture) => {
+      .setPath('/hdr/')
+      .load('simple-light.hdr', (hdrTexture) => {
         const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
-    
-        scene.environment = envMap; // ✅ PBR lighting
-    
+        scene.environment = envMap;
         hdrTexture.dispose();
         pmremGenerator.dispose();
       });
 
-    // Controls with enhanced zoom range
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 0.5;      // Allow zooming VERY close (was 10)
-    controls.maxDistance = 1000;     // Allow zooming VERY far (was 1000)
-    controls.zoomSpeed = 1.0;        // Slightly faster zoom
-    controls.enablePan = true;       // Enable panning
+    controls.minDistance = 0.5;
+    controls.maxDistance = 1000;
+    controls.zoomSpeed = 1.0;
+    controls.enablePan = true;
     controls.panSpeed = 0.8;
     controlsRef.current = controls;
 
-    // Track when user starts interacting
-    const onControlStart = () => {
-      isUserInteractingRef.current = true;
-    };
-
-    const onControlEnd = () => {
-      isUserInteractingRef.current = false;
-    };
-
-    // Only clear bubble if user is actively rotating/moving camera
-    // AND enough time has passed since bubble was set (prevents immediate clearing)
-    const onControlChange = () => {
-      const timeSinceBubbleSet = Date.now() - bubbleSetTimeRef.current;
-      
-      // Only clear if:
-      // 1. User is actively dragging/rotating
-      // 2. At least 200ms has passed since bubble was set (prevents race condition)
-      // 3. Model has finished loading (prevents clearing during initial setup)
-      if (isUserInteractingRef.current && timeSinceBubbleSet > 200 && modelLoadedRef.current) {
-        setPartBubble(null);
-        setBubbleAnchor(null);
-      }
-    };
-
-    controls.addEventListener('start', onControlStart);
-    controls.addEventListener('end', onControlEnd);
-    controls.addEventListener('change', onControlChange);
-
-    // Load model
     const loader = new GLTFLoader();
     const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.7/");
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
     loader.setDRACOLoader(dracoLoader);
 
     loader.load(
@@ -169,29 +125,25 @@ export default function ModelViewer() {
       (gltf) => {
         const loadedModel = gltf.scene;
         loadedModel.scale.set(model.scale, model.scale, model.scale);
-        
-        // Enable shadows and log all mesh names for debugging
+
         loadedModel.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
-            console.log('Mesh found:', child.name);
           }
         });
 
         scene.add(loadedModel);
         modelRef.current = loadedModel;
 
-        // Center the model
         const box = new THREE.Box3().setFromObject(loadedModel);
         const center = box.getCenter(new THREE.Vector3());
         loadedModel.position.sub(center);
 
-        // Adjust camera to fit model
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
         const distance = maxDim * 2;
-        
+
         camera.position.set(
           distance * 0.7,
           distance * 0.5,
@@ -200,111 +152,20 @@ export default function ModelViewer() {
         camera.lookAt(0, 0, 0);
         controls.target.set(0, 0, 0);
         controls.update();
-        
-        // Mark model as loaded and hide loading screen
+
         setTimeout(() => {
           modelLoadedRef.current = true;
+          setIsTowerBubbleVisible(true);
           setIsLoading(false);
-          console.log('✅ Model fully loaded and ready for interaction');
         }, 500);
       },
       undefined,
       (error) => {
         console.error('Error loading model:', error);
-        setIsLoading(false); // Hide loading screen even on error
+        setIsLoading(false);
       }
     );
 
-    // Click handler for parts
-    const handleClick = (event) => {
-      // Don't process clicks if model isn't loaded yet
-      if (!modelLoadedRef.current || !modelRef.current) {
-        console.log('⏳ Model not ready yet');
-        return;
-      }
-
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycasterRef.current.setFromCamera(mouseRef.current, camera);
-      
-      console.log('🖱️ Click detected');
-
-      // Intersect with all meshes recursively
-      const intersects = raycasterRef.current.intersectObjects(
-        modelRef.current.children,
-        true // recursive
-      );
-
-      if (intersects.length > 0) {
-        const intersected = intersects[0].object;
-        
-        // Try multiple ways to get the node name
-        let nodeName = intersected.name;
-        
-        // If no name, check parent hierarchy
-        if (!nodeName && intersected.parent) {
-          nodeName = intersected.parent.name;
-        }
-        
-        // If still no name, traverse up the hierarchy
-        if (!nodeName) {
-          let current = intersected;
-          while (current.parent && !nodeName) {
-            current = current.parent;
-            if (current.name && current !== modelRef.current) {
-              nodeName = current.name;
-              break;
-            }
-          }
-        }
-        
-        console.log('Picked object:', nodeName, 'Type:', intersected.type);
-
-        if (nodeName) {
-          const key = normalizeNodeName(nodeName);
-          
-          // Try multiple lookup strategies
-          const part = model.parts?.[key] || 
-                       model.parts?.[nodeName] || 
-                       model.parts?.[nodeName.replace(/_/g, " ")] ||
-                       model.parts?.[nodeName.toLowerCase()];
-
-          if (part) {
-            console.log(`✅ Part found: ${part.label} (key: ${key})`);
-            
-            // Record when bubble was set to prevent immediate clearing
-            bubbleSetTimeRef.current = Date.now();
-            
-            setPartBubble(part);
-
-            setBubbleAnchor({
-              x: event.clientX,
-              y: event.clientY,
-            });
-
-            return;
-          } else {
-            console.log(`⚠️ No part definition found for: "${nodeName}" (normalized: "${key}")`);
-            console.log('Available parts:', Object.keys(model.parts || {}));
-          }
-        } else {
-          console.log('⚠️ No name found for intersected object');
-        }
-      } else {
-        console.log("❌ No objects intersected");
-      }
-      
-      // Only clear bubble if we didn't find a valid part
-      setPartBubble(null);
-      setBubbleAnchor(null);
-    };
-
-    // Use pointerdown to ensure clean click detection
-    renderer.domElement.addEventListener('pointerdown', handleClick);
-
-    // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
       controls.update();
@@ -312,25 +173,19 @@ export default function ModelViewer() {
     };
     animate();
 
-    // Handle resize
     const handleResize = () => {
       if (!containerRef.current) return;
       const width = containerRef.current.clientWidth;
       const height = containerRef.current.clientHeight;
-      
+
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
     };
     window.addEventListener('resize', handleResize);
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-      renderer.domElement.removeEventListener('pointerdown', handleClick);
-      controls.removeEventListener('start', onControlStart);
-      controls.removeEventListener('end', onControlEnd);
-      controls.removeEventListener('change', onControlChange);
       controls.dispose();
       dracoLoader.dispose();
       renderer.dispose();
@@ -462,9 +317,9 @@ export default function ModelViewer() {
         overflow: 'hidden'
       }} />
 
-      <PartBubble
-        bubble={partBubble}
-        anchor={bubbleAnchor}
+      <TowerBubble
+        tower={model}
+        visible={isTowerBubbleVisible && !isLoading}
       />
     </div>
   );
