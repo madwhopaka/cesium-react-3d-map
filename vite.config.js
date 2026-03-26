@@ -8,6 +8,7 @@ export default defineConfig({
     host: "0.0.0.0",   // listen on all interfaces
     port: 5173,
     strictPort: true,
+    allowedHosts: ["urogenous-uninfused-janis.ngrok-free.dev"],
   },
   test: {
     globals: true,
