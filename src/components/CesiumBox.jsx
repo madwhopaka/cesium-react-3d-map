@@ -77,7 +77,6 @@ export default function CesiumMap({
       : setLocalRenderProfile;
   const cloudLayerRef = useRef(null); // Track cloud layer entity
   const hoverCardHideTimeoutRef = useRef(null);
-  const previousPathRef = useRef(location.pathname);
   const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
@@ -787,23 +786,11 @@ useEffect(() => {
     setPanelOpen(true);
   };
 
-  useEffect(() => {
-    const previousPath = previousPathRef.current;
-    const currentPath = location.pathname;
-
-    const isOverviewRoute = (path) => path === "/";
-    const isMapRoute = (path) => path === "/map" || path.startsWith("/map/");
-
-    const switchedBetweenOverviewAndMap =
-      (isOverviewRoute(previousPath) && isMapRoute(currentPath)) ||
-      (isMapRoute(previousPath) && isOverviewRoute(currentPath));
-
-    if (switchedBetweenOverviewAndMap) {
-      resetToInitialGlobeView();
-    }
-
-    previousPathRef.current = currentPath;
-  }, [location.pathname]);
+  const openMapFromMenu = () => {
+    resetToInitialGlobeView();
+    navigate("/map", { replace: true });
+    setPanelOpen(true);
+  };
 
   useEffect(() => {
     if (!entitiesReady || !routeModelId || !MODEL_LOOKUP[routeModelId]) return;
@@ -984,6 +971,7 @@ useEffect(() => {
         onToggle={() => setPanelOpen((v) => !v)}
         onHome={goHome}
         onOverview={goHome}
+        onMap={openMapFromMenu}
         onSelectModel={flyToModel}
         renderProfile={renderProfile}
         renderProfileLabel={RENDER_PRESETS[renderProfile].label}
