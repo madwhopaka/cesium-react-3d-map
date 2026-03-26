@@ -11,6 +11,7 @@ import PartBubble from "./Cesium/PartsModal";
 import TowerBubble from "./Cesium/TowerModal";
 
 export default function ModelViewer() {
+  const VIEWER_BG = "#f5f5f5";
   const { modelId } = useParams();
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
@@ -52,7 +53,7 @@ export default function ModelViewer() {
     if (!model) return;
 
     const scene = new THREE.Scene();
-      scene.background = new THREE.Color('#1F1C1C');
+    scene.background = new THREE.Color(VIEWER_BG);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
@@ -65,6 +66,7 @@ export default function ModelViewer() {
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setClearColor(VIEWER_BG, 1);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
@@ -264,8 +266,8 @@ export default function ModelViewer() {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-          backgroundColor: '#2f2f2f',
-        color: '#f5f5f5',
+        backgroundColor: VIEWER_BG,
+        color: '#1f1f1f',
         flexDirection: 'column',
         gap: '20px'
       }}>
@@ -287,13 +289,13 @@ export default function ModelViewer() {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: '#2f2f2f', color: '#f5f5f5', fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: VIEWER_BG, color: '#1f1f1f', fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif' }}>
       {/* Loading Screen */}
       {isLoading && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(47, 47, 47, 0.96)',
+          backgroundColor: 'rgba(245, 245, 245, 0.96)',
           backdropFilter: 'blur(10px)',
           display: 'flex',
           flexDirection: 'column',
@@ -305,15 +307,15 @@ export default function ModelViewer() {
           <div style={{
             width: '60px',
             height: '60px',
-            border: '4px solid #454545',
-            borderTop: '4px solid #8a8a8a',
+            border: '4px solid #d4d4d4',
+            borderTop: '4px solid #6b6b6b',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }} />
           <div style={{
             fontSize: '18px',
             fontWeight: '600',
-            color: '#f5f5f5',
+            color: '#1f1f1f',
           }}>
             Loading 3D Model…
           </div>
@@ -376,6 +378,7 @@ export default function ModelViewer() {
         left: 0,
         width: '100%', 
         height: '100%',
+        backgroundColor: VIEWER_BG,
         overflow: 'hidden'
       }} />
 
