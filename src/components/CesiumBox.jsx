@@ -11,6 +11,9 @@ import {
   CESIUM_CONFIG,
   MODEL_CONFIG,
   BLIP_CONFIG,
+  getStatusColorForStatus,
+  getStatusVariant,
+  getBlipImageForStatus,
   getVisibilityThreshold,
 } from "../constants/config";
 import { normalizeNodeName } from "../helpers/helper";
@@ -329,7 +332,7 @@ export default function CesiumMap({
           position: tipPos,
           modelId: model.id,
           billboard: {
-            image: BLIP_CONFIG.imageUrl,
+            image: getBlipImageForStatus(model.status),
             scale: BLIP_CONFIG.scale,
             verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
             pixelOffset: new Cesium.Cartesian2(0, BLIP_PIXEL_OFFSET_Y),
@@ -866,6 +869,14 @@ useEffect(() => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  const hoverStatusVariant = hoverBlipCard
+    ? getStatusVariant(hoverBlipCard.model.status)
+    : "green";
+  const hoverStatusBackground = hoverBlipCard
+    ? getStatusColorForStatus(hoverBlipCard.model.status)
+    : "#22c55e";
+  const hoverStatusTextColor = hoverStatusVariant === "yellow" ? "#1f1f1f" : "#ffffff";
+
 
   return (
     <>
@@ -897,11 +908,8 @@ useEffect(() => {
             <div
               style={{
                 padding: "6px 10px",
-                background: String(hoverBlipCard.model.status || "").toLowerCase().includes("maintenance")
-                  ? "#e4c3cb"
-                  : String(hoverBlipCard.model.status || "").toLowerCase().includes("offline")
-                  ? "#f2dcb3"
-                  : "#cce8d7",
+                background: hoverStatusBackground,
+                color: hoverStatusTextColor,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -917,13 +925,12 @@ useEffect(() => {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#ffffff",
+                  color: hoverStatusTextColor,
                   fontSize: 11,
-                  background: String(hoverBlipCard.model.status || "").toLowerCase().includes("maintenance")
-                    ? "#e11d48"
-                    : String(hoverBlipCard.model.status || "").toLowerCase().includes("offline")
-                    ? "#d97706"
-                    : "#16a34a",
+                  background:
+                    hoverStatusVariant === "yellow"
+                      ? "rgba(0,0,0,0.18)"
+                      : "rgba(255,255,255,0.24)",
                 }}
               >
                 i
