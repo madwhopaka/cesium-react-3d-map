@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Home, Map, RadioTower, TriangleAlert, LayoutDashboard, ChevronLeft } from "lucide-react";
+import { Home, Map, RadioTower, TriangleAlert, LayoutDashboard } from "lucide-react";
 
 export default function ModelsPanel({
   models,

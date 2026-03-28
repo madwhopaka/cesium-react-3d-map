@@ -83,6 +83,9 @@ export default function CesiumMap({
   const isOverviewOpen = useMemo(() => {
     return location.pathname === "/";
   }, [location.pathname]);
+  const isMapRoute = useMemo(() => {
+    return location.pathname === "/map" || location.pathname.startsWith("/map/");
+  }, [location.pathname]);
 
   const RENDER_PRESETS = {
     fast: {
@@ -1006,42 +1009,78 @@ useEffect(() => {
         }}
       />
 
-      {isOverviewOpen ? (
-        <button
-          type="button"
-          onClick={() => navigate("/map", { replace: true })}
-          title="Expand map to full view"
-          aria-label="Expand map to full view"
+      {isOverviewOpen || isMapRoute ? (
+        <div
           style={{
             position: "fixed",
-            top: 24,
-            right: 24,
+            left: sidebarWidth + 24,
+            bottom: isOverviewOpen ? "calc(50vh + 24px)" : 24,
             zIndex: 30,
-            width: 42,
-            height: 42,
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.16)",
-            background: "rgba(28,27,27,0.72)",
-            backdropFilter: "blur(8px)",
-            color: "#f5f5f5",
-            cursor: "pointer",
-            boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
+            gap: 10,
           }}
         >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-            <path d="M8 3H3V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M3 3L10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M16 3H21V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M21 3L14 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M8 21H3V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M3 21L10 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M16 21H21V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M21 21L14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+          {isOverviewOpen && (
+            <button
+              type="button"
+              onClick={() => navigate("/map", { replace: true })}
+              title="Expand map to full view"
+              aria-label="Expand map to full view"
+              style={{
+                width: 42,
+                height: 42,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.16)",
+                background: "rgba(28,27,27,0.72)",
+                backdropFilter: "blur(8px)",
+                color: "#f5f5f5",
+                cursor: "pointer",
+                boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                <path d="M8 3H3V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 3L10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M16 3H21V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M21 3L14 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M8 21H3V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 21L10 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M16 21H21V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M21 21L14 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={resetToInitialGlobeView}
+            title="Reset globe view"
+            aria-label="Reset globe view"
+            style={{
+              width: 42,
+              height: 42,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.16)",
+              background: "rgba(28,27,27,0.72)",
+              backdropFilter: "blur(8px)",
+              color: "#f5f5f5",
+              cursor: "pointer",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       ) : null}
 
       <PartBubble
