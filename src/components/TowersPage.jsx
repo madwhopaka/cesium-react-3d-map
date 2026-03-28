@@ -154,6 +154,7 @@ export default function TowersPage({
                   background: "rgba(255,255,255,0.03)",
                   border: "1px solid rgba(255,255,255,0.06)",
                   display: "flex",
+                  position: "relative",
                   alignItems: "center",
                   gap: 10,
                   color: "#d9d0d0",
@@ -166,21 +167,36 @@ export default function TowersPage({
                   onChange={(event) => setFilterValue(event.target.value)}
                   aria-label="Filter towers by status"
                   style={{
-                    background: "transparent",
-                    border: "none",
+                    minWidth: 152,
+                    padding: "8px 34px 8px 10px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(255,255,255,0.03)",
                     color: "#f5f5f5",
                     outline: "none",
                     fontSize: 13,
                     appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
                     cursor: "pointer",
+                    lineHeight: 1.2,
                   }}
                 >
-                  <option value="All">All</option>
-                  <option value="Active">Active</option>
-                  <option value="Offline">Offline</option>
-                  <option value="Maintenance due">Maintenance due</option>
+                  <option value="All" style={{ background: "#1F1C1C", color: "#f5f5f5" }}>All</option>
+                  <option value="Active" style={{ background: "#1F1C1C", color: "#f5f5f5" }}>Active</option>
+                  <option value="Offline" style={{ background: "#1F1C1C", color: "#f5f5f5" }}>Offline</option>
+                  <option value="Maintenance due" style={{ background: "#1F1C1C", color: "#f5f5f5" }}>Maintenance due</option>
                 </select>
-                <span style={{ color: "#b0a7a7" }}>▾</span>
+                <span
+                  style={{
+                    color: "#b0a7a7",
+                    position: "absolute",
+                    right: 24,
+                    pointerEvents: "none",
+                  }}
+                >
+                  ▾
+                </span>
               </div>
 
               <button
