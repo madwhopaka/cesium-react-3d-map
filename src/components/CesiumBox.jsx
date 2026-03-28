@@ -78,6 +78,7 @@ export default function CesiumMap({
   const cloudLayerRef = useRef(null); // Track cloud layer entity
   const hoverCardHideTimeoutRef = useRef(null);
   const previousPathRef = useRef(location.pathname);
+  const skipNextOverviewMapResetRef = useRef(false);
   const sidebarWidth = panelOpen ? 248 : 68;
   const hasAutoFlewRef = useRef(false);
   const isOverviewOpen = useMemo(() => {
@@ -790,6 +791,11 @@ useEffect(() => {
     setPanelOpen(true);
   };
 
+  const openMapFromFullscreenButton = () => {
+    skipNextOverviewMapResetRef.current = true;
+    navigate("/map", { replace: true });
+  };
+
   useEffect(() => {
     const previousPath = previousPathRef.current;
     const currentPath = location.pathname;
@@ -802,7 +808,13 @@ useEffect(() => {
       (isMapRoute(previousPath) && isOverviewRoute(currentPath));
 
     if (switchedBetweenOverviewAndMap) {
-      resetToInitialGlobeView();
+      if (skipNextOverviewMapResetRef.current) {
+        skipNextOverviewMapResetRef.current = false;
+      } else {
+        resetToInitialGlobeView();
+      }
+    } else {
+      skipNextOverviewMapResetRef.current = false;
     }
 
     previousPathRef.current = currentPath;
@@ -1024,7 +1036,7 @@ useEffect(() => {
           {isOverviewOpen && (
             <button
               type="button"
-              onClick={() => navigate("/map", { replace: true })}
+              onClick={openMapFromFullscreenButton}
               title="Expand map to full view"
               aria-label="Expand map to full view"
               style={{
