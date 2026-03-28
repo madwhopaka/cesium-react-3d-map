@@ -30,6 +30,7 @@ export default function ModelViewer({
   const clockRef = useRef(new THREE.Clock());
   const isInteractingRef = useRef(false);
   const lastInteractionAtRef = useRef(0);
+  const isAutoRotateEnabledRef = useRef(autoRotate);
 
   const model = MODEL_LOOKUP[modelId];
   const [isTowerBubbleVisible, setIsTowerBubbleVisible] = useState(false);
@@ -37,6 +38,11 @@ export default function ModelViewer({
   const [bubbleAnchor, setBubbleAnchor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInIframe, setIsInIframe] = useState(false);
+  const [isAutoRotateEnabled, setIsAutoRotateEnabled] = useState(autoRotate);
+
+  useEffect(() => {
+    isAutoRotateEnabledRef.current = isAutoRotateEnabled;
+  }, [isAutoRotateEnabled]);
 
   // Detect if component is in iframe
   useEffect(() => {
@@ -264,7 +270,7 @@ export default function ModelViewer({
       const canResumeRotation = !resumeAfterInactivity || inactivityElapsed >= resumeDelayMs;
 
       if (
-        autoRotate &&
+        isAutoRotateEnabledRef.current &&
         modelRef.current &&
         !isInteractingRef.current &&
         canResumeRotation
@@ -420,6 +426,62 @@ export default function ModelViewer({
       >
         <h2 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '600' }}>{model.name}</h2>
       </div>
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isAutoRotateEnabled}
+        onClick={() => setIsAutoRotateEnabled((prev) => !prev)}
+        style={{
+          position: 'absolute',
+          right: '20px',
+          bottom: '20px',
+          zIndex: 1000,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 10px',
+          border: '1px solid #FF0091',
+          borderRadius: '999px',
+          backgroundColor: '#ffffff',
+          color: '#FF0091',
+          boxShadow: '0 8px 18px rgba(255, 0, 145, 0.24)',
+          backdropFilter: 'blur(10px)',
+          fontSize: '11px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          minWidth: '106px',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span>{isAutoRotateEnabled ? 'Rotate' : 'Still'}</span>
+        <span
+          aria-hidden="true"
+          style={{
+            width: '34px',
+            height: '20px',
+            borderRadius: '999px',
+            backgroundColor: isAutoRotateEnabled ? '#FF0091' : '#ffffff',
+            border: '1px solid #FF0091',
+            position: 'relative',
+            transition: 'background-color 180ms ease',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: '2px',
+              left: isAutoRotateEnabled ? '17px' : '2px',
+              width: '14px',
+              height: '14px',
+              borderRadius: '50%',
+              backgroundColor: isAutoRotateEnabled ? '#ffffff' : '#FF0091',
+              transition: 'left 180ms ease',
+            }}
+          />
+        </span>
+      </button>
 
       <div ref={containerRef} style={{ 
         position: 'absolute',
