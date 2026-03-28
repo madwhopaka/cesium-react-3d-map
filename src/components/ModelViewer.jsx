@@ -10,7 +10,12 @@ import { normalizeNodeName } from "../helpers/helper";
 import PartBubble from "./Cesium/PartsModal";
 import TowerBubble from "./Cesium/TowerModal";
 
-export default function ModelViewer() {
+export default function ModelViewer({
+  autoRotate = true,
+  autoRotateSpeed = 0.45,
+  resumeAfterInactivity = true,
+  resumeDelayMs = 2000,
+} = {}) {
   const VIEWER_BG = "#f5f5f5";
   const { modelId } = useParams();
   const containerRef = useRef(null);
@@ -22,6 +27,9 @@ export default function ModelViewer() {
   const modelLoadedRef = useRef(false);
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerRef = useRef(new THREE.Vector2());
+  const clockRef = useRef(new THREE.Clock());
+  const isInteractingRef = useRef(false);
+  const lastInteractionAtRef = useRef(0);
 
   const model = MODEL_LOOKUP[modelId];
   const [isTowerBubbleVisible, setIsTowerBubbleVisible] = useState(false);
@@ -122,6 +130,25 @@ export default function ModelViewer() {
     controls.enablePan = true;
     controls.panSpeed = 0.8;
     controlsRef.current = controls;
+
+    const markInteractionStart = () => {
+      isInteractingRef.current = true;
+      lastInteractionAtRef.current = performance.now();
+    };
+
+    const markInteractionEnd = () => {
+      isInteractingRef.current = false;
+      lastInteractionAtRef.current = performance.now();
+    };
+
+    controls.addEventListener("start", markInteractionStart);
+    controls.addEventListener("end", markInteractionEnd);
+
+    renderer.domElement.addEventListener("pointerdown", markInteractionStart);
+    renderer.domElement.addEventListener("pointerup", markInteractionEnd);
+    renderer.domElement.addEventListener("touchstart", markInteractionStart, { passive: true });
+    renderer.domElement.addEventListener("touchend", markInteractionEnd);
+    renderer.domElement.addEventListener("wheel", markInteractionStart, { passive: true });
 
     const handlePartClick = (event) => {
       if (!modelRef.current || !cameraRef.current || !rendererRef.current) return;
@@ -229,8 +256,22 @@ export default function ModelViewer() {
       }
     );
 
+    let animationFrameId = 0;
     const animate = () => {
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
+      const delta = clockRef.current.getDelta();
+      const inactivityElapsed = performance.now() - lastInteractionAtRef.current;
+      const canResumeRotation = !resumeAfterInactivity || inactivityElapsed >= resumeDelayMs;
+
+      if (
+        autoRotate &&
+        modelRef.current &&
+        !isInteractingRef.current &&
+        canResumeRotation
+      ) {
+        modelRef.current.rotation.y += autoRotateSpeed * delta;
+      }
+
       controls.update();
       renderer.render(scene, camera);
     };
@@ -250,9 +291,17 @@ export default function ModelViewer() {
     return () => {
       window.removeEventListener('resize', handleResize);
       renderer.domElement.removeEventListener("click", handlePartClick);
+      renderer.domElement.removeEventListener("pointerdown", markInteractionStart);
+      renderer.domElement.removeEventListener("pointerup", markInteractionEnd);
+      renderer.domElement.removeEventListener("touchstart", markInteractionStart);
+      renderer.domElement.removeEventListener("touchend", markInteractionEnd);
+      renderer.domElement.removeEventListener("wheel", markInteractionStart);
+      controls.removeEventListener("start", markInteractionStart);
+      controls.removeEventListener("end", markInteractionEnd);
       controls.dispose();
       dracoLoader.dispose();
       renderer.dispose();
+      cancelAnimationFrame(animationFrameId);
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
