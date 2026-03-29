@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bell, MoveLeft, Search } from "lucide-react";
 import { MODELS } from "../constants/models";
 import ModelsPanel from "./Cesium/LeftPanel";
+import CommonHeader from "./CommonHeader";
+import DashboardStatusCards from "./DashboardStatusCards";
 
 function statusTone(status) {
   const value = (status || "").toLowerCase();
@@ -12,28 +13,68 @@ function statusTone(status) {
   return { bg: "#ececec", fg: "#4b4b4b", border: "#d1d1d1" };
 }
 
+const FILTER_OPTIONS = ["All", "Active", "Offline", "Maintenance due"];
+
+function matchesFilter(status, filter) {
+  const normalizedStatus = String(status || "").toLowerCase();
+  if (filter === "Active") return normalizedStatus.includes("active");
+  if (filter === "Offline") return normalizedStatus.includes("offline");
+  if (filter === "Maintenance due") return normalizedStatus.includes("maintenance");
+  return true;
+}
+
+function queryTokenToFilter(token) {
+  if (token === "maintenance") return "Maintenance due";
+  if (token === "offline") return "Offline";
+  if (token === "active") return "Active";
+  return "All";
+}
+
+function filterToQueryToken(filter) {
+  if (filter === "Maintenance due") return "maintenance";
+  if (filter === "Offline") return "offline";
+  if (filter === "Active") return "active";
+  return "all";
+}
+
 export default function TowersPage({
   renderProfile = "balanced",
   onRenderProfileChange,
 }) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [filterValue, setFilterValue] = useState("All");
+  const [selectedFilters, setSelectedFilters] = useState(["All"]);
   const [towerSearch, setTowerSearch] = useState("");
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const filterMenuRef = useRef(null);
   const navigate = useNavigate();
 
-  const filterValueFromQuery = useMemo(() => {
+  const selectedFiltersFromQuery = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    const value = (params.get("filter") || "all").toLowerCase();
-    if (value === "maintenance") return "Maintenance due";
-    if (value === "offline") return "Offline";
-    if (value === "active") return "Active";
-    return "All";
+    const queryValue = String(params.get("filter") || "all").toLowerCase();
+    const mapped = queryValue
+      .split(",")
+      .map((token) => queryTokenToFilter(token.trim()))
+      .filter((value, index, array) => FILTER_OPTIONS.includes(value) && array.indexOf(value) === index);
+
+    if (mapped.length === 0 || mapped.includes("All")) return ["All"];
+    return mapped;
   }, [location.search]);
 
   useEffect(() => {
-    setFilterValue(filterValueFromQuery);
-  }, [filterValueFromQuery]);
+    setSelectedFilters(selectedFiltersFromQuery);
+  }, [selectedFiltersFromQuery]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target)) {
+        setIsFilterMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
 
   const rows = useMemo(() => {
     return MODELS.map((model) => ({
@@ -48,9 +89,9 @@ export default function TowersPage({
 
   const filteredRows = useMemo(() => {
     const statusFilteredRows =
-      filterValue === "All"
+      selectedFilters.includes("All")
         ? rows
-        : rows.filter((row) => row.status.toLowerCase() === filterValue.toLowerCase());
+        : rows.filter((row) => selectedFilters.some((filter) => matchesFilter(row.status, filter)));
 
     const query = towerSearch.trim().toLowerCase();
     if (!query) return statusFilteredRows;
@@ -68,7 +109,7 @@ export default function TowersPage({
         .toLowerCase()
         .includes(query)
     );
-  }, [filterValue, rows, towerSearch]);
+  }, [selectedFilters, rows, towerSearch]);
 
   const dashboardStats = useMemo(() => {
     const maintenanceCount = rows.filter((row) => String(row.status).toLowerCase().includes("maintenance")).length;
@@ -83,7 +124,7 @@ export default function TowersPage({
         textColor: "#C50B2F",
         bgColor: "#C50B2F14",
         filterValue: "Maintenance due",
-        icon: "🛡",
+        iconKey: "maintenance",
       },
       {
         id: "offline",
@@ -92,7 +133,7 @@ export default function TowersPage({
         textColor: "#B25A20",
         bgColor: "#B25A2014",
         filterValue: "Offline",
-        icon: "🔧",
+        iconKey: "offline",
       },
       {
         id: "active",
@@ -101,7 +142,7 @@ export default function TowersPage({
         textColor: "#136B36",
         bgColor: "#136B3614",
         filterValue: "Active",
-        icon: "⚡",
+        iconKey: "active",
       },
       {
         id: "all",
@@ -110,22 +151,45 @@ export default function TowersPage({
         textColor: "#141113",
         bgColor: "#14111310",
         filterValue: "All",
-        icon: "⟲",
+        iconKey: "all",
       },
     ];
   }, [rows]);
 
+  const towerMetaById = useMemo(() => {
+    return rows.reduce((accumulator, row) => {
+      accumulator[row.model.id] = {
+        name: row.model.name || `Tower ${row.model.id}`,
+        location: row.location || "Unknown",
+      };
+      return accumulator;
+    }, {});
+  }, [rows]);
+
   const applyTowerFilter = (nextFilter) => {
-    setFilterValue(nextFilter);
-    const queryValue =
-      nextFilter === "Maintenance due"
-        ? "maintenance"
-        : nextFilter === "Offline"
-        ? "offline"
-        : nextFilter === "Active"
-        ? "active"
-        : "all";
-    navigate(`/towers?filter=${queryValue}`, { replace: true });
+    setSelectedFilters((previous) => {
+      let nextFilters;
+
+      if (nextFilter === "All") {
+        nextFilters = ["All"];
+      } else {
+        const previousWithoutAll = previous.filter((value) => value !== "All");
+        nextFilters = previousWithoutAll.includes(nextFilter)
+          ? previousWithoutAll.filter((value) => value !== nextFilter)
+          : [...previousWithoutAll, nextFilter];
+
+        if (nextFilters.length === 0) {
+          nextFilters = ["All"];
+        }
+      }
+
+      const queryValue = nextFilters.includes("All")
+        ? "all"
+        : nextFilters.map((filter) => filterToQueryToken(filter)).join(",");
+
+      navigate(`/towers?filter=${queryValue}`, { replace: true });
+      return nextFilters;
+    });
   };
 
   const RENDER_PROFILE_LABELS = {
@@ -166,8 +230,10 @@ export default function TowersPage({
         style={{
           paddingLeft: sidebarOpen ? 264 : 84,
           paddingRight: 24,
-          paddingTop: 24,
+          paddingTop: 0,
           paddingBottom: 24,
+          height: "100vh",
+          overflow: "hidden",
           transition: "padding-left 320ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
@@ -178,174 +244,27 @@ export default function TowersPage({
             display: "flex",
             flexDirection: "column",
             gap: 18,
+            height: "100%",
+            minHeight: 0,
           }}
         >
-          <header
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 14,
-              background: "#FFFFFF",
-              padding: "14px 8px",
-            }}
-          >
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              {sidebarOpen && (
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(false)}
-                  aria-label="Close sidebar"
-                  title="Close sidebar"
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    padding: 0,
-                    display: "inline-flex",
-                    marginRight: 15,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    color: "#121212",
-                  }}
-                >
-                  <MoveLeft color="currentColor" />
-                </button>
-              )}
-              <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#141113", lineHeight: 1.1 }}>
-                Tower Details
-              </h1>
-            </div>
+          <CommonHeader
+            title="Tower Details"
+            showBackButton={sidebarOpen}
+            onBackButtonClick={() => setSidebarOpen(false)}
+            searchValue={towerSearch}
+            onSearchChange={setTowerSearch}
+            searchAriaLabel="Search towers in details"
+            notificationTowerMetaById={towerMetaById}
+            notificationDialogLabel="Tower notifications"
+            containerStyle={{ padding: "14px 8px" }}
+          />
 
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "0 1 520px" }}>
-              <label
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: "#F7F7F7",
-                  border: "1px solid #F0F0F0",
-                  borderRadius: 999,
-                  padding: "9px 12px",
-                }}
-              >
-                <Search color="#000000" />
-                <input
-                  type="text"
-                  value={towerSearch}
-                  onChange={(event) => setTowerSearch(event.target.value)}
-                  placeholder="Search something"
-                  aria-label="Search towers in details"
-                  style={{
-                    width: "100%",
-                    border: "none",
-                    background: "transparent",
-                    color: "#141113",
-                    outline: "none",
-                    fontSize: 13,
-                  }}
-                />
-              </label>
-
-              <span
-                style={{
-                  position: "relative",
-                  width: 36,
-                  height: 36,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#141113",
-                }}
-                aria-label="Notifications"
-                title="Notifications"
-              >
-                <Bell size={20} strokeWidth={1.9} aria-hidden="true" />
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 2,
-                    right: 1,
-                    width: 9,
-                    height: 9,
-                    borderRadius: 999,
-                    background: "#FF003D",
-                    border: "1px solid #FFFFFF",
-                  }}
-                />
-              </span>
-              <span
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 999,
-                  background: "#136B36",
-                  color: "#FFFFFF",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 14,
-                  fontWeight: 700,
-                }}
-              >
-                T
-              </span>
-            </div>
-          </header>
-
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 10,
-            }}
-          >
-            {dashboardStats.map((card) => (
-              <article
-                key={card.id}
-                onClick={() => applyTowerFilter(card.filterValue)}
-                style={{
-                  background: card.bgColor,
-                  borderRadius: 4,
-                  border: filterValue === card.filterValue ? `1px solid ${card.textColor}` : "1px solid #F0F0F0",
-                  borderLeft: `3px solid ${card.textColor}`,
-                  padding: "10px 12px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 5,
-                  minHeight: 68,
-                  cursor: "pointer",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    color: card.textColor,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    lineHeight: 1,
-                  }}
-                >
-                  <span aria-hidden="true" style={{ fontSize: 12 }}>{card.icon}</span>
-                  <span>{card.label}</span>
-                </div>
-                <strong
-                  style={{
-                    color: "#141113",
-                    fontSize: 22,
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    marginLeft: 18,
-                  }}
-                >
-                  {card.count}
-                </strong>
-              </article>
-            ))}
-          </section>
+          <DashboardStatusCards
+            cards={dashboardStats}
+            activeValues={selectedFilters}
+            onCardClick={(card) => applyTowerFilter(card.filterValue)}
+          />
 
           <section
             style={{
@@ -354,6 +273,10 @@ export default function TowersPage({
               background: "#FFFFFF",
               border: "1px solid #F0F0F0",
               boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+              minHeight: 0,
             }}
           >
             <div
@@ -369,6 +292,7 @@ export default function TowersPage({
               <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2, color: "#141113" }}>Network tower List</h2>
 
               <div
+                ref={filterMenuRef}
                 style={{
                   display: "flex",
                   position: "relative",
@@ -378,46 +302,78 @@ export default function TowersPage({
                   fontSize: 13,
                 }}
               >
-                <span style={{ color: "#141113", fontSize: 12 }}>Filters</span>
-                <select
-                  value={filterValue}
-                  onChange={(event) => applyTowerFilter(event.target.value)}
+                <button
+                  type="button"
+                  onClick={() => setIsFilterMenuOpen((value) => !value)}
                   aria-label="Filter towers by status"
                   style={{
-                    minWidth: 152,
-                    padding: "8px 34px 8px 10px",
+                    minWidth: 186,
+                    padding: "8px 10px",
                     borderRadius: 10,
                     border: "1px solid #F0F0F0",
                     background: "#FFFFFF",
                     color: "#141113",
                     outline: "none",
                     fontSize: 13,
-                    appearance: "none",
-                    WebkitAppearance: "none",
-                    MozAppearance: "none",
                     cursor: "pointer",
                     lineHeight: 1.2,
+                    textAlign: "left",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
                   }}
                 >
-                  <option value="All" style={{ background: "#FFFFFF", color: "#141113" }}>All</option>
-                  <option value="Active" style={{ background: "#FFFFFF", color: "#141113" }}>Active</option>
-                  <option value="Offline" style={{ background: "#FFFFFF", color: "#141113" }}>Offline</option>
-                  <option value="Maintenance due" style={{ background: "#FFFFFF", color: "#141113" }}>Maintenance due</option>
-                </select>
-                <span
-                  style={{
-                    color: "#141113",
-                    position: "absolute",
-                    right: 12,
-                    pointerEvents: "none",
-                  }}
-                >
-                  ▾
-                </span>
+                  <span>
+                    {selectedFilters.includes("All") ? "All" : selectedFilters.join(", ")}
+                  </span>
+                  <span aria-hidden="true">▾</span>
+                </button>
+
+                {isFilterMenuOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 8px)",
+                      right: 0,
+                      minWidth: 220,
+                      padding: 10,
+                      borderRadius: 10,
+                      border: "1px solid #F0F0F0",
+                      background: "#FFFFFF",
+                      boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
+                      zIndex: 20,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    {FILTER_OPTIONS.map((option) => (
+                      <label
+                        key={option}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 13,
+                          color: "#141113",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedFilters.includes(option)}
+                          onChange={() => applyTowerFilter(option)}
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div id="tower-details" style={{ overflowX: "auto" }}>
+            <div id="tower-details" style={{ overflow: "auto", flex: 1, minHeight: 0 }}>
               <table
                 style={{
                   width: "100%",

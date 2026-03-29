@@ -241,7 +241,7 @@ export default function ModelsPanel({
                 marginTop: 10,
                 display: "grid",
                 gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                gap:2,
+                gap:1,
                 padding: 3,
                 borderRadius: 12,
                 background: "#FFFFFF",
@@ -260,7 +260,11 @@ export default function ModelsPanel({
                     type="button"
                     onClick={() => onSetRenderProfile?.(option.key)}
                     style={{
+                      display:"flex",
+                      justifyContent:"center",
+                      alignItems:"center",
                       width: "100%",
+                      textAlign: "center",
                       boxSizing: "border-box",
                       border: isActive ? "1px solid #FF0091" : "1px solid transparent",
                       background: "transparent",
