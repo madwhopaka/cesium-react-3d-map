@@ -19,7 +19,7 @@ const NOTIFICATION_ITEMS = [
     type: "alert",
     unread: true,
     title: "Antenna Misalignment",
-    time: "3 min ago",
+    time: "8 min ago",
     tower_id: "SICO001139",
     description: [
       "The antenna positioning appears to be off-angle, which may affect signal performance.",
@@ -29,9 +29,9 @@ const NOTIFICATION_ITEMS = [
   {
     id: "new-installation",
     type: "notification",
-    unread: false,
+    unread: true,
     title: "New Installation",
-    time: "3 min ago",
+    time: "10 min ago",
     tower_id: "A001",
     description: [
       "A new antenna unit has been successfully installed at the site.",
@@ -42,7 +42,7 @@ const NOTIFICATION_ITEMS = [
 
 export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel = "Tower notifications" }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [expandedIds, setExpandedIds] = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
   const wrapperRef = useRef(null);
 
   const notifications = useMemo(() => {
@@ -82,11 +82,7 @@ export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel 
   }, [isOpen]);
 
   const toggleNotificationExpansion = (notificationId) => {
-    setExpandedIds((previous) =>
-      previous.includes(notificationId)
-        ? previous.filter((id) => id !== notificationId)
-        : [...previous, notificationId]
-    );
+    setExpandedId((previous) => (previous === notificationId ? null : notificationId));
   };
 
   return (
@@ -187,7 +183,7 @@ export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel 
           </div>
 
           {notifications.map((item) => {
-            const isExpanded = expandedIds.includes(item.id);
+            const isExpanded = expandedId === item.id;
             const isAlert = item.type === "alert";
             const toneColor = isAlert ? "#e73636" : "#4d88d5";
             const toneBackground = isAlert ? "#fff2f2" : "#f1f6ff";
@@ -217,51 +213,48 @@ export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel 
                     background: "transparent",
                     padding: "10px 10px 9px",
                     textAlign: "left",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 7,
+                    display: "grid",
+                    gridTemplateColumns: "34px 1fr",
+                    gridTemplateRows: "auto auto",
+                    columnGap: 10,
+                    rowGap: 6,
+                    alignItems: "center",
                     cursor: "pointer",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      <span
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 999,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: toneColor,
-                          background: toneBackground,
-                        }}
-                      >
-                        {isAlert ? (
-                          <TriangleAlert size={14} color="#e73636" aria-hidden="true" />
-                        ) : (
-                          <Wrench size={14} color="#4d88d5" aria-hidden="true" />
-                        )}
-                      </span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#141113" }}>{item.title}</span>
-                    </div>
+                  <span
+                    style={{
+                      gridRow: "1 / span 2",
+                      width: 34,
+                      height: 34,
+                      borderRadius: 999,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: toneColor,
+                      background: toneBackground,
+                    }}
+                  >
+                    {isAlert ? (
+                      <TriangleAlert size={20} color="#e73636" aria-hidden="true" />
+                    ) : (
+                      <Wrench size={20} color="#4d88d5" aria-hidden="true" />
+                    )}
+                  </span>
 
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#141113" }}>{item.title}</span>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <span
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          color: toneColor,
-                          background: toneBackground,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "#6A6A6A",
                         }}
                       >
-                        {isAlert ? "Alert" : "Notification"}
+                        {item.time}
                       </span>
                       <ChevronDown
                         size={14}
@@ -274,17 +267,14 @@ export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel 
 
                   <div
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "4px 10px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
                       fontSize: 11,
                       color: "#4D4D4D",
                     }}
                   >
-                    <span><strong style={{ color: "#141113" }}>Tower:</strong> {item.tower_id}</span>
-                    <span><strong style={{ color: "#141113" }}>Time:</strong> {item.time}</span>
-                    <span><strong style={{ color: "#141113" }}>Name:</strong> {item.name}</span>
-                    <span><strong style={{ color: "#141113" }}>Location:</strong> {item.location}</span>
+                    <span><strong style={{ color: "#141113" }}>Tower:</strong> {item.tower_id} - {item.location}</span>
                   </div>
                 </button>
 
