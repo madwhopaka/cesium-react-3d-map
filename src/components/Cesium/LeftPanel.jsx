@@ -21,7 +21,7 @@ export default function ModelsPanel({
   }, [location.pathname, location.search]);
 
   const navItems = [
-    { label: "Overview", kind: "action", onClick: onOverview, icon: Home, active: () => location.pathname === "/" || location.pathname === "/towers" },
+    { label: "Overview", kind: "action", onClick: onOverview, icon: Home, active: () => location.pathname === "/" },
     { label: "Maps", kind: "link", to: "/map", icon: Map, active: () => location.pathname === "/map" || location.pathname.startsWith("/map/") },
     { label: "Tower Details", kind: "link", to: "/towers", icon: RadioTower, active: () => location.pathname === "/towers" || location.pathname === "/tower" },
     { label: "Maintenance Activity", kind: "disabled", icon: TriangleAlert },

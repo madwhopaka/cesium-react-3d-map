@@ -1,7 +1,15 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ExternalLink } from "lucide-react";
 
-export default function TowerBubble({ tower, visible, onOpenInWindow, showModelViewerLink = true }) {
+export default function TowerBubble({
+  tower,
+  visible,
+  onToggleInWindow,
+  isInWindowOpen = false,
+  onOpenInWindow,
+  showModelViewerLink = true,
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const towerDetails = useMemo(() => {
@@ -42,9 +50,9 @@ export default function TowerBubble({ tower, visible, onOpenInWindow, showModelV
         padding: 8,
         background: "#ffffff",
         backdropFilter: "blur(12px)",
-        borderRadius: 20,
+        borderRadius: 10,
         color: "#4a4a4a",
-        boxShadow: "0 16px 44px rgba(0,0,0,0.16)",
+        // boxShadow: "0 10px 10px rgba(0,0,0,0.16)",
         zIndex: 1000,
         animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
         display: "flex",
@@ -82,55 +90,6 @@ export default function TowerBubble({ tower, visible, onOpenInWindow, showModelV
           <div style={{ marginTop: 2, color: "#6d6d6d", fontSize: isExpanded ? 12 : 11 }}>
             Maintenance: <span style={{ color: "#4a4a4a", fontWeight: 600 }}>{maintenanceStatus}</span>
           </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              flexWrap: "nowrap",
-              marginTop: isExpanded ? 8 : 6,
-            }}
-          >
-            {showModelViewerLink && (
-              <Link
-                to={`/model-viewer/${tower.id}`}
-                target="_blank"
-                style={{
-                  color: "#4a4a4a",
-                  textDecoration: "underline",
-                  textUnderlineOffset: 3,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                3D model viewer
-              </Link>
-            )}
-
-            {onOpenInWindow && (
-              <button
-                type="button"
-                onClick={onOpenInWindow}
-                style={{
-                  padding: 0,
-                  border: "none",
-                  background: "transparent",
-                  color: "#4a4a4a",
-                  textDecoration: "underline",
-                  textUnderlineOffset: 3,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                3D in-window
-              </button>
-            )}
-          </div>
         </div>
 
         <button
@@ -144,7 +103,11 @@ export default function TowerBubble({ tower, visible, onOpenInWindow, showModelV
             color: "#4a4a4a",
             cursor: "pointer",
             padding: 0,
-            fontSize: isExpanded ? 18 : 16,
+            width: 20,
+            height: 20,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
             transition: "transform 220ms ease, opacity 220ms ease",
             transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
             opacity: 0.9,
@@ -152,7 +115,7 @@ export default function TowerBubble({ tower, visible, onOpenInWindow, showModelV
             marginTop: 2,
           }}
         >
-          {isExpanded ? "−" : "+"}
+          <ChevronDown size={16} />
         </button>
       </div>
 

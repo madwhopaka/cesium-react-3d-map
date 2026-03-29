@@ -1,7 +1,7 @@
 .App {
   min-height: 100vh;
-  background: #1F1C1C;
-  color: #f5f5f5;
+  background: #FFFFFF;
+  color: #141113;
   text-align: left;
 }
 
@@ -14,7 +14,7 @@ html,
 body,
 #root {
   min-height: 100%;
-  background: #1F1C1C;
+  background: #FFFFFF;
 }
 
 body {
@@ -22,7 +22,7 @@ body {
   font-family: "DM Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #f5f5f5;
+  color: #141113;
 }
 
 button,

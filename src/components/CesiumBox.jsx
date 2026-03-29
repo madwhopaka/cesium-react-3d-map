@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Bell, MoveLeft, Search } from "lucide-react";
+import { ArrowLeft, Bell, ExternalLink, MoveLeft, Search } from "lucide-react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -12,8 +12,6 @@ import {
   CESIUM_CONFIG,
   MODEL_CONFIG,
   BLIP_CONFIG,
-  getStatusColorForStatus,
-  getStatusVariant,
   getBlipImageForStatus,
   getVisibilityThreshold,
 } from "../constants/config";
@@ -837,6 +835,31 @@ useEffect(() => {
     viewer.scene.requestRender();
   };
 
+  const zoomInManually = () => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    const currentHeight = viewer.camera.positionCartographic?.height || 1000;
+    const step = Math.max(25, currentHeight * 0.2);
+    viewer.camera.zoomIn(step);
+    viewer.scene.requestRender();
+  };
+
+  const zoomOutManually = () => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    const currentHeight = viewer.camera.positionCartographic?.height || 1000;
+    const step = Math.max(25, currentHeight * 0.2);
+    viewer.camera.zoomOut(step);
+    viewer.scene.requestRender();
+  };
+
+  const openActiveModelInNewScreen = () => {
+    if (!activeModelRef.current?.id) return;
+    window.open(`/model-viewer/${activeModelRef.current.id}`, "_blank", "noopener,noreferrer");
+  };
+
   const openOverviewPanel = () => {
     navigate("/", { replace: true });
     setPanelOpen(true);
@@ -917,13 +940,20 @@ useEffect(() => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const hoverStatusVariant = hoverBlipCard
-    ? getStatusVariant(hoverBlipCard.model.status)
-    : "green";
-  const hoverStatusBackground = hoverBlipCard
-    ? getStatusColorForStatus(hoverBlipCard.model.status)
-    : "#22c55e";
-  const hoverStatusTextColor = hoverStatusVariant === "yellow" ? "#1f1f1f" : "#ffffff";
+  const hoverStatusTone = useMemo(() => {
+    const status = String(hoverBlipCard?.model?.status || "").toLowerCase();
+
+    if (status.includes("maintenance")) {
+      return { bg: "#C50B2F14", fg: "#C50B2F" };
+    }
+    if (status.includes("offline")) {
+      return { bg: "#B25A2014", fg: "#B25A20" };
+    }
+    if (status.includes("active")) {
+      return { bg: "#136B3614", fg: "#136B36" };
+    }
+    return { bg: "#14111310", fg: "#141113" };
+  }, [hoverBlipCard]);
 
 
   return (
@@ -956,8 +986,8 @@ useEffect(() => {
             <div
               style={{
                 padding: "6px 10px",
-                background: hoverStatusBackground,
-                color: hoverStatusTextColor,
+                background: hoverStatusTone.bg,
+                color: hoverStatusTone.fg,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -973,12 +1003,9 @@ useEffect(() => {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: hoverStatusTextColor,
+                  color: hoverStatusTone.fg,
                   fontSize: 11,
-                  background:
-                    hoverStatusVariant === "yellow"
-                      ? "rgba(0,0,0,0.18)"
-                      : "rgba(255,255,255,0.24)",
+                  background: "rgba(255,255,255,0.78)",
                 }}
               >
                 i
@@ -1179,6 +1206,31 @@ useEffect(() => {
         </section>
       )}
 
+      {isMapRoute && panelOpen && (
+        <button
+          type="button"
+          onClick={() => setPanelOpen(false)}
+          aria-label="Close sidebar"
+          title="Close sidebar"
+          style={{
+            position: "fixed",
+            top: 16,
+            left: sidebarWidth + 16,
+            zIndex: 31,
+            border: "none",
+            background: "transparent",
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#121212",
+          }}
+        >
+          <MoveLeft color="white" /> <span style={{color: "white", marginLeft:10}}>Close</span>
+        </button>
+      )}
+
       {isOverviewOpen && (
         <section
           style={{
@@ -1260,14 +1312,167 @@ useEffect(() => {
         <div
           style={{
             position: "fixed",
-            left: sidebarWidth + 24,
+            right: 24,
             bottom: isOverviewOpen ? "calc(42vh + 24px)" : 24,
             zIndex: 30,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-end",
             gap: 10,
           }}
         >
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "5px 7px",
+                borderRadius: 999,
+                border: "1px solid #F0F0F0",
+                background: "#FFFFFF",
+              }}
+            >
+              <button
+                type="button"
+                onClick={zoomOutManually}
+                title="Zoom out"
+                aria-label="Zoom out"
+                style={{
+                  width: 30,
+                  height: 30,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#141113",
+                  color: "#FFFFFF",
+                  cursor: "pointer",
+                  fontSize: 24,
+                  fontWeight: 500,
+                  lineHeight: 0.7,
+                  paddingBottom: 2,
+                }}
+              >
+                -
+              </button>
+
+              <button
+                type="button"
+                onClick={zoomInManually}
+                title="Zoom in"
+                aria-label="Zoom in"
+                style={{
+                  width: 30,
+                  height: 30,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#141113",
+                  color: "#FFFFFF",
+                  cursor: "pointer",
+                  fontSize: 24,
+                  fontWeight: 500,
+                  lineHeight: 0.7,
+                  paddingBottom: 1,
+                }}
+              >
+                +
+              </button>
+            </div>
+
+            {Boolean(towerBubble) && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!activeModelRef.current?.id) return;
+                    setShowMiniViewer((value) => !value);
+                  }}
+                  aria-pressed={showMiniViewer}
+                  title={showMiniViewer ? "Turn off in-window 3D" : "Turn on in-window 3D"}
+                  style={{
+                    height: 44,
+                    minWidth: 132,
+                    padding: "0 6px 0 12px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    borderRadius: 999,
+                    outline: "none",
+                    border: "1px solid #F0F0F0",
+                    background: "#FFFFFF",
+                    position: "relative",
+                    cursor: activeModelRef.current?.id ? "pointer" : "not-allowed",
+                    opacity: activeModelRef.current?.id ? 1 : 0.45,
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#141113", whiteSpace: "nowrap" }}>
+                    View GLB
+                  </span>
+
+                  <span
+                    style={{
+                      width: 44,
+                      height: 24,
+                      borderRadius: 999,
+                      border: "1px solid #E8E8E8",
+                      background: "#cfcaca",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      position: "relative",
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 1,
+                        left: showMiniViewer ? 21 : 1,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 999,
+                        border: "1px solid white",
+                        background: "#0F0B14",
+                        transition: "left 160ms ease",
+                      }}
+                    />
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={openActiveModelInNewScreen}
+                  title="Open 3D model in new screen"
+                  aria-label="Open 3D model in new screen"
+                  style={{
+                    height: 44,
+                    width: 44,
+                    borderRadius: 999,
+                    border: "1px solid #F0F0F0",
+                    color: "#141113",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#FFFFFF",
+                    cursor: activeModelRef.current?.id ? "pointer" : "not-allowed",
+                    opacity: activeModelRef.current?.id ? 1 : 0.45,
+                  }}
+                >
+                  <ExternalLink size={17} />
+                </button>
+              </div>
+            )}
+          </div>
+
           {isOverviewOpen && (
             <button
               type="button"
@@ -1337,7 +1542,8 @@ useEffect(() => {
       <TowerBubble
         tower={towerBubble}
         visible={Boolean(towerBubble)}
-        onOpenInWindow={() => setShowMiniViewer(true)}
+        isInWindowOpen={showMiniViewer}
+        onToggleInWindow={(nextState) => setShowMiniViewer(Boolean(nextState))}
       />
 
       {isOverviewOpen && (
@@ -1524,60 +1730,80 @@ useEffect(() => {
           style={{
             position: 'fixed',
             inset: 0,
-            // backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            background: 'rgba(20, 17, 19, 0.28)',
             zIndex: 10000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backdropFilter: 'blur(4px)',
+            backdropFilter: 'blur(8px)',
           }}
           onClick={() => setShowMiniViewer(false)}
         >
           <div
             style={{
               position: 'relative',
-              width: '60vw',
-              height: '90vh',
-              maxWidth: '1400px',
-              maxHeight: '900px',
-              borderRadius: '20px',
+              width: '82vw',
+              height: '92vh',
+              maxWidth: '1800px',
+              maxHeight: '1080px',
+              borderRadius: '24px',
               overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              border: '1px solid #F0F0F0',
+              boxShadow: '0 26px 70px rgba(20,17,19,0.24)',
+              background: '#FFFFFF',
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '56px',
+                background: 'rgba(255,255,255,0.94)',
+                borderBottom: '1px solid #F0F0F0',
+                zIndex: 10001,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 18px',
+              }}
+            >
+              <div style={{ color: '#141113', fontSize: '14px', fontWeight: 700 }}>
+                {activeModelRef.current.name || `Tower ${activeModelRef.current.id}`}
+              </div>
+            </div>
+
             {/* Close Button */}
             <button
               onClick={() => setShowMiniViewer(false)}
               style={{
                 position: 'absolute',
-                top: '20px',
-                right: '20px',
-                width: '50px',
-                height: '50px',
+                top: '10px',
+                right: '12px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.95)',
-                border: 'none',
+                background: '#FFFFFF',
+                border: '1px solid #F0F0F0',
                 cursor: 'pointer',
                 zIndex: 10001,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '24px',
+                fontSize: '18px',
                 fontWeight: 'bold',
-                color: '#333',
-                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.3s ease',
+                color: '#141113',
+                transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.target.style.background = 'rgba(255, 60, 60, 0.95)';
-                e.target.style.color = 'white';
-                e.target.style.transform = 'rotate(90deg) scale(1.1)';
+                e.target.style.background = '#FF0091';
+                e.target.style.color = '#FFFFFF';
               }}
               onMouseLeave={(e) => {
-                e.target.style.background = 'rgba(255, 255, 255, 0.95)';
-                e.target.style.color = '#333';
-                e.target.style.transform = 'rotate(0deg) scale(1)';
+                e.target.style.background = '#FFFFFF';
+                e.target.style.color = '#141113';
               }}
             >
               ✕
@@ -1590,7 +1816,7 @@ useEffect(() => {
                 width: '100%',
                 height: '100%',
                 border: 'none',
-                borderRadius: '20px',
+                borderRadius: '24px',
               }}
               title="3D Model Viewer"
             />

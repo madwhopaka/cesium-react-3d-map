@@ -14,6 +14,11 @@ export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
             from { opacity: 0; }
             to { opacity: 1; }
           }
+
+          @keyframes pulseSoft {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.97); opacity: 0.92; }
+          }
         `}
       </style>
 
@@ -25,9 +30,8 @@ export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
           bottom: 0,
           left: leftOffset,
           zIndex: 9999,
-          background: "#1F1C1C",
+          background: "#FFFFFF",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           animation: "fadeIn 0.2s ease-out",
@@ -35,34 +39,49 @@ export default function LoadingScreen({ isVisible, leftOffset = 0 }) {
       >
         <div
           style={{
-            width: "80px",
-            height: "80px",
-            border: "4px solid #2a2424",
-            borderTop: "4px solid #f5f5f5",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            marginBottom: "24px",
-          }}
-        />
-
-        <div
-          style={{
-            color: "#f5f5f5",
-            fontSize: "24px",
-            fontWeight: 600,
-            marginBottom: "8px",
+            minWidth: "260px",
+            borderRadius: "18px",
+            border: "1px solid #F0F0F0",
+            background: "#FFFFFF",
+            padding: "24px 24px 20px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "pulseSoft 1.8s ease-in-out infinite",
           }}
         >
-          Loading 3D Model
-        </div>
+          <div
+            style={{
+              width: "56px",
+              height: "56px",
+              border: "4px solid #FFD7EE",
+              borderTop: "4px solid #FF0091",
+              borderRadius: "50%",
+              animation: "spin 0.9s linear infinite",
+              marginBottom: "18px",
+            }}
+          />
 
-        <div
-          style={{
-            color: "#b0a7a7",
-            fontSize: "14px",
-          }}
-        >
-          Rendering tower and environment...
+          <div
+            style={{
+              color: "#141113",
+              fontSize: "20px",
+              fontWeight: 700,
+              marginBottom: "6px",
+            }}
+          >
+            Loading 3D Model
+          </div>
+
+          <div
+            style={{
+              color: "#757575",
+              fontSize: "13px",
+            }}
+          >
+            Rendering tower and environment...
+          </div>
         </div>
       </div>
     </>

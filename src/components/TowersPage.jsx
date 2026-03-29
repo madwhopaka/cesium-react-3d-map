@@ -1,40 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Bell, MoveLeft, Search } from "lucide-react";
 import { MODELS } from "../constants/models";
 import ModelsPanel from "./Cesium/LeftPanel";
-
-const TOWER_OVERVIEW_META = {
-  SICA001946: {
-    location: "Yokohama Bay",
-    statusUpdated: "Today",
-    assignedTo: "Tasneem",
-  },
-  SITX024649: {
-    location: "Yokohama Bay",
-    statusUpdated: "8 min ago",
-    assignedTo: "Tasneem",
-  },
-  204312: {
-    location: "Shinjuku area",
-    statusUpdated: "15 min ago",
-    assignedTo: "Tasneem",
-  },
-  SICO001139: {
-    location: "Central Honshu",
-    statusUpdated: "5 hrs ago",
-    assignedTo: "Tasneem",
-  },
-  A001: {
-    location: "Yokohama Bay",
-    statusUpdated: "20 hrs ago",
-    assignedTo: "Tasneem",
-  },
-  78266: {
-    location: "Shinjuku area",
-    statusUpdated: "07 Feb '26 10:22 AM",
-    assignedTo: "Tasneem",
-  },
-};
 
 function statusTone(status) {
   const value = (status || "").toLowerCase();
@@ -51,6 +19,7 @@ export default function TowersPage({
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [filterValue, setFilterValue] = useState("All");
+  const [towerSearch, setTowerSearch] = useState("");
   const navigate = useNavigate();
 
   const filterValueFromQuery = useMemo(() => {
@@ -70,17 +39,36 @@ export default function TowersPage({
     return MODELS.map((model) => ({
       model,
       type: model.towerSpecs?.type || "-",
-      location: TOWER_OVERVIEW_META[model.id]?.location || "Unknown",
+      location: model.towerSpecs?.location || "Unknown",
       status: model.status || "Unknown",
-      statusUpdated: TOWER_OVERVIEW_META[model.id]?.statusUpdated || "Today",
-      assignedTo: TOWER_OVERVIEW_META[model.id]?.assignedTo || "Tasneem",
+      statusUpdated: model.statusUpdated || "-",
+      assignedTo: model.assignedTo || "-",
     }));
   }, []);
 
   const filteredRows = useMemo(() => {
-    if (filterValue === "All") return rows;
-    return rows.filter((row) => row.status.toLowerCase() === filterValue.toLowerCase());
-  }, [filterValue, rows]);
+    const statusFilteredRows =
+      filterValue === "All"
+        ? rows
+        : rows.filter((row) => row.status.toLowerCase() === filterValue.toLowerCase());
+
+    const query = towerSearch.trim().toLowerCase();
+    if (!query) return statusFilteredRows;
+
+    return statusFilteredRows.filter((row) =>
+      [
+        row.model.id,
+        row.location,
+        row.type,
+        row.status,
+        row.statusUpdated,
+        row.assignedTo,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [filterValue, rows, towerSearch]);
 
   const dashboardStats = useMemo(() => {
     const maintenanceCount = rows.filter((row) => String(row.status).toLowerCase().includes("maintenance")).length;
@@ -195,98 +183,114 @@ export default function TowersPage({
           <header
             style={{
               display: "flex",
-              alignItems: "flex-start",
+              alignItems: "center",
               justifyContent: "space-between",
-              gap: 16,
-              padding: "20px 22px",
-              borderRadius: 24,
+              gap: 14,
               background: "#FFFFFF",
-              border: "1px solid #F0F0F0",
-              boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
-              backdropFilter: "blur(12px)",
+              padding: "14px 8px",
             }}
           >
-            <div style={{ minWidth: 0 }}>
-              <div style={{ color: "#141113", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.14em" }}>
-                Tower Details
-              </div>
-              <h1 style={{ margin: "8px 0 8px", fontSize: 28, lineHeight: 1.1, textWrap: "balance" }}>
-                Tower Details
-              </h1>
-              <p style={{ margin: 0, color: "#141113", fontSize: 14, maxWidth: 680, lineHeight: 1.6 }}>
-                Inspect tower-level details, maintenance status, and navigation actions from one place.
-              </p>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              {filterValue === "All" && (
-                <div
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              {sidebarOpen && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(false)}
+                  aria-label="Close sidebar"
+                  title="Close sidebar"
                   style={{
-                    padding: "10px 14px",
-                    borderRadius: 14,
-                    background: "#FFFFFF",
-                    border: "1px solid #F0F0F0",
-                    display: "flex",
-                    position: "relative",
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    display: "inline-flex",
+                    marginRight: 15,
                     alignItems: "center",
-                    gap: 10,
-                    color: "#141113",
-                    fontSize: 13,
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "#121212",
                   }}
                 >
-                  <span style={{ color: "#141113", fontSize: 12 }}>Filters</span>
-                  <select
-                    value={filterValue}
-                    onChange={(event) => applyTowerFilter(event.target.value)}
-                    aria-label="Filter towers by status"
-                    style={{
-                      minWidth: 152,
-                      padding: "8px 34px 8px 10px",
-                      borderRadius: 10,
-                      border: "1px solid #F0F0F0",
-                      background: "#FFFFFF",
-                      color: "#141113",
-                      outline: "none",
-                      fontSize: 13,
-                      appearance: "none",
-                      WebkitAppearance: "none",
-                      MozAppearance: "none",
-                      cursor: "pointer",
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    <option value="All" style={{ background: "#FFFFFF", color: "#141113" }}>All</option>
-                    <option value="Active" style={{ background: "#FFFFFF", color: "#141113" }}>Active</option>
-                    <option value="Offline" style={{ background: "#FFFFFF", color: "#141113" }}>Offline</option>
-                    <option value="Maintenance due" style={{ background: "#FFFFFF", color: "#141113" }}>Maintenance due</option>
-                  </select>
-                  <span
-                    style={{
-                      color: "#141113",
-                      position: "absolute",
-                      right: 24,
-                      pointerEvents: "none",
-                    }}
-                  >
-                    ▾
-                  </span>
-                </div>
+                  <MoveLeft color="currentColor" />
+                </button>
               )}
+              <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#141113", lineHeight: 1.1 }}>
+                Tower Details
+              </h1>
+            </div>
 
-             
-
-              <div
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "0 1 520px" }}>
+              <label
                 style={{
-                  padding: "12px 16px",
-                  borderRadius: 14,
-                  background: "#FFFFFF",
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "#F7F7F7",
                   border: "1px solid #F0F0F0",
-                  fontSize: 13,
-                  color: "#141113",
+                  borderRadius: 999,
+                  padding: "9px 12px",
                 }}
               >
-                {filteredRows.length} records
-              </div>
+                <Search color="#000000" />
+                <input
+                  type="text"
+                  value={towerSearch}
+                  onChange={(event) => setTowerSearch(event.target.value)}
+                  placeholder="Search something"
+                  aria-label="Search towers in details"
+                  style={{
+                    width: "100%",
+                    border: "none",
+                    background: "transparent",
+                    color: "#141113",
+                    outline: "none",
+                    fontSize: 13,
+                  }}
+                />
+              </label>
+
+              <span
+                style={{
+                  position: "relative",
+                  width: 36,
+                  height: 36,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#141113",
+                }}
+                aria-label="Notifications"
+                title="Notifications"
+              >
+                <Bell size={20} strokeWidth={1.9} aria-hidden="true" />
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 2,
+                    right: 1,
+                    width: 9,
+                    height: 9,
+                    borderRadius: 999,
+                    background: "#FF003D",
+                    border: "1px solid #FFFFFF",
+                  }}
+                />
+              </span>
+              <span
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 999,
+                  background: "#136B36",
+                  color: "#FFFFFF",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                T
+              </span>
             </div>
           </header>
 
@@ -352,6 +356,67 @@ export default function TowersPage({
               boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
             }}
           >
+            <div
+              style={{
+                padding: "4px 2px 14px",
+                borderBottom: "1px solid #F0F0F0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2, color: "#141113" }}>Network tower List</h2>
+
+              <div
+                style={{
+                  display: "flex",
+                  position: "relative",
+                  alignItems: "center",
+                  gap: 10,
+                  color: "#141113",
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ color: "#141113", fontSize: 12 }}>Filters</span>
+                <select
+                  value={filterValue}
+                  onChange={(event) => applyTowerFilter(event.target.value)}
+                  aria-label="Filter towers by status"
+                  style={{
+                    minWidth: 152,
+                    padding: "8px 34px 8px 10px",
+                    borderRadius: 10,
+                    border: "1px solid #F0F0F0",
+                    background: "#FFFFFF",
+                    color: "#141113",
+                    outline: "none",
+                    fontSize: 13,
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                    cursor: "pointer",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  <option value="All" style={{ background: "#FFFFFF", color: "#141113" }}>All</option>
+                  <option value="Active" style={{ background: "#FFFFFF", color: "#141113" }}>Active</option>
+                  <option value="Offline" style={{ background: "#FFFFFF", color: "#141113" }}>Offline</option>
+                  <option value="Maintenance due" style={{ background: "#FFFFFF", color: "#141113" }}>Maintenance due</option>
+                </select>
+                <span
+                  style={{
+                    color: "#141113",
+                    position: "absolute",
+                    right: 12,
+                    pointerEvents: "none",
+                  }}
+                >
+                  ▾
+                </span>
+              </div>
+            </div>
+
             <div id="tower-details" style={{ overflowX: "auto" }}>
               <table
                 style={{

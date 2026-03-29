@@ -5,13 +5,13 @@
 @tailwind utilities;
 
 html {
-  color-scheme: dark;
-  background: #1F1C1C;
+  color-scheme: light;
+  background: #FFFFFF;
 }
 
 body {
   margin: 0;
-  background: #1F1C1C;
+  background: #FFFFFF;
   font-family: "DM Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

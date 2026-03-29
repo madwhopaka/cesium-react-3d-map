@@ -29,6 +29,7 @@ export default function ModelViewer({
   const pointerRef = useRef(new THREE.Vector2());
   const clockRef = useRef(new THREE.Clock());
   const isInteractingRef = useRef(false);
+  const interactionResetTimerRef = useRef(null);
   const lastInteractionAtRef = useRef(0);
   const isAutoRotateEnabledRef = useRef(autoRotate);
 
@@ -140,11 +141,27 @@ export default function ModelViewer({
     const markInteractionStart = () => {
       isInteractingRef.current = true;
       lastInteractionAtRef.current = performance.now();
+
+      if (interactionResetTimerRef.current) {
+        window.clearTimeout(interactionResetTimerRef.current);
+      }
+
+      // Some interactions (especially wheel) may not emit a reliable "end" event.
+      // This timeout prevents auto-rotate from getting stuck off.
+      interactionResetTimerRef.current = window.setTimeout(() => {
+        isInteractingRef.current = false;
+        lastInteractionAtRef.current = performance.now();
+      }, 160);
     };
 
     const markInteractionEnd = () => {
       isInteractingRef.current = false;
       lastInteractionAtRef.current = performance.now();
+
+      if (interactionResetTimerRef.current) {
+        window.clearTimeout(interactionResetTimerRef.current);
+        interactionResetTimerRef.current = null;
+      }
     };
 
     controls.addEventListener("start", markInteractionStart);
@@ -152,6 +169,7 @@ export default function ModelViewer({
 
     renderer.domElement.addEventListener("pointerdown", markInteractionStart);
     renderer.domElement.addEventListener("pointerup", markInteractionEnd);
+    renderer.domElement.addEventListener("pointercancel", markInteractionEnd);
     renderer.domElement.addEventListener("touchstart", markInteractionStart, { passive: true });
     renderer.domElement.addEventListener("touchend", markInteractionEnd);
     renderer.domElement.addEventListener("wheel", markInteractionStart, { passive: true });
@@ -299,11 +317,16 @@ export default function ModelViewer({
       renderer.domElement.removeEventListener("click", handlePartClick);
       renderer.domElement.removeEventListener("pointerdown", markInteractionStart);
       renderer.domElement.removeEventListener("pointerup", markInteractionEnd);
+      renderer.domElement.removeEventListener("pointercancel", markInteractionEnd);
       renderer.domElement.removeEventListener("touchstart", markInteractionStart);
       renderer.domElement.removeEventListener("touchend", markInteractionEnd);
       renderer.domElement.removeEventListener("wheel", markInteractionStart);
       controls.removeEventListener("start", markInteractionStart);
       controls.removeEventListener("end", markInteractionEnd);
+      if (interactionResetTimerRef.current) {
+        window.clearTimeout(interactionResetTimerRef.current);
+        interactionResetTimerRef.current = null;
+      }
       controls.dispose();
       dracoLoader.dispose();
       renderer.dispose();
@@ -331,8 +354,8 @@ export default function ModelViewer({
           to="/" 
           style={{
             padding: '12px 24px',
-            backgroundColor: '#444444',
-            color: '#f5f5f5',
+            backgroundColor: 'white',
+            color: '#FF0091',
             textDecoration: 'none',
             borderRadius: '8px'
           }}
@@ -394,38 +417,20 @@ export default function ModelViewer({
             left: '20px',
             zIndex: 1000,
             padding: '12px 24px',
-            backgroundColor: 'rgba(47, 47, 47, 0.96)',
-            color: '#f5f5f5',
+            backgroundColor: 'white',
+            color: '#FF0091',
             textDecoration: 'none',
             borderRadius: '8px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.24)',
+            // boxShadow: '0 10px 30px rgba(0,0,0,0.24)',
             fontSize: '14px',
             fontWeight: '500',
-            backdropFilter: 'blur(10px)',
+            // backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
           ← Back to Map
         </Link>
       )}
-
-      <div
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          zIndex: 1000,
-          padding: '8px 12px',
-          backgroundColor: 'rgba(47, 47, 47, 0.96)',
-          color: '#f5f5f5',
-          borderRadius: '6px',
-          boxShadow: '0 10px 22px rgba(0,0,0,0.24)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.06)',
-        }}
-      >
-        <h2 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '600' }}>{model.name}</h2>
-      </div>
 
       <button
         type="button"
@@ -437,46 +442,49 @@ export default function ModelViewer({
           right: '20px',
           bottom: '20px',
           zIndex: 1000,
+          height: '50px',
+          minWidth: '130px',
+          padding: '0 8px 0 14px',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: '6px 10px',
-          border: '1px solid #FF0091',
-          borderRadius: '999px',
-          backgroundColor: '#ffffff',
-          color: '#FF0091',
-          boxShadow: '0 8px 18px rgba(255, 0, 145, 0.24)',
-          backdropFilter: 'blur(10px)',
-          fontSize: '11px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          minWidth: '106px',
           justifyContent: 'space-between',
+          gap: '4px',
+          border: '1px solid #F0F0F0',
+          borderRadius: '999px',
+          backgroundColor: '#FFFFFF',
+          color: '#141113',
+          boxShadow: '0 8px 18px rgba(20, 17, 19, 0.14)',
+          backdropFilter: 'blur(10px)',
+          fontSize: '13px',
+          fontWeight: '700',
+          cursor: 'pointer',
         }}
       >
-        <span>{isAutoRotateEnabled ? 'Rotate' : 'Still'}</span>
+        <span style={{fontSize:15}}>{isAutoRotateEnabled ? 'Rotate' : 'Still'}</span>
         <span
           aria-hidden="true"
           style={{
-            width: '34px',
-            height: '20px',
+            width: '48px',
+            height: '26px',
             borderRadius: '999px',
-            backgroundColor: isAutoRotateEnabled ? '#FF0091' : '#ffffff',
-            border: '1px solid #FF0091',
+            border: '1px solid #E8E8E8',
+            backgroundColor: '#cfcaca',
+            display: 'inline-flex',
+            alignItems: 'center',
             position: 'relative',
-            transition: 'background-color 180ms ease',
             flexShrink: 0,
           }}
         >
           <span
             style={{
               position: 'absolute',
-              top: '2px',
-              left: isAutoRotateEnabled ? '17px' : '2px',
-              width: '14px',
-              height: '14px',
+              top: '1px',
+              left: isAutoRotateEnabled ? '23px' : '1px',
+              width: '22px',
+              height: '22px',
               borderRadius: '50%',
-              backgroundColor: isAutoRotateEnabled ? '#ffffff' : '#FF0091',
+              border: '1px solid #0F0B14',
+              backgroundColor: '#0F0B14',
               transition: 'left 180ms ease',
             }}
           />

@@ -28,7 +28,7 @@ export function getStatusVariant(status) {
     normalizedStatus.includes("down") ||
     normalizedStatus.includes("critical")
   ) {
-    return "red";
+    return "yellow";
   }
 
   if (
@@ -36,7 +36,7 @@ export function getStatusVariant(status) {
     normalizedStatus.includes("due") ||
     normalizedStatus.includes("warning")
   ) {
-    return "yellow";
+    return "red";
   }
 
   if (
