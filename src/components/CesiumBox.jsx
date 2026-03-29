@@ -421,8 +421,21 @@ export default function CesiumMap({
       console.log('✅ Blips created:', Object.keys(blipMapRef.current).length);
       console.log('✅ Labels created:', Object.keys(labelMapRef.current).length);
 
-      const first = MODELS[0];
       homeViewRef.current = {
+        destination: Cesium.Cartesian3.fromDegrees(
+          143.067537,
+          12.107314,
+          6937250.07
+        ),
+        orientation: {
+          heading: Cesium.Math.toRadians(359.64),
+          pitch: Cesium.Math.toRadians(-66.86),
+          roll: Cesium.Math.toRadians(0.5),
+        },
+      };
+
+      const first = MODELS[0];
+      const mapInitialView = {
         destination: Cesium.Cartesian3.fromDegrees(
           first.lon,
           first.lat,
@@ -435,7 +448,7 @@ export default function CesiumMap({
         },
       };
 
-      viewer.camera.setView(homeViewRef.current);
+      viewer.camera.setView(isOverviewOpen ? homeViewRef.current : mapInitialView);
 
       const logCurrentCameraView = () => {
         const camera = viewer.camera;
@@ -964,8 +977,21 @@ useEffect(() => {
     setIsLoading3D(true);
     isFlyingRef.current = true;
 
+    const isMapPath = location.pathname === "/map" || location.pathname.startsWith("/map/");
     const first = MODELS[0];
-    const initialHomeView = homeViewRef.current || {
+    const overviewInitialView = homeViewRef.current || {
+      destination: Cesium.Cartesian3.fromDegrees(
+        143.067537,
+        12.107314,
+        6937250.07
+      ),
+      orientation: {
+        heading: Cesium.Math.toRadians(359.64),
+        pitch: Cesium.Math.toRadians(-66.86),
+        roll: Cesium.Math.toRadians(0.5),
+      },
+    };
+    const mapInitialView = {
       destination: Cesium.Cartesian3.fromDegrees(
         first.lon,
         first.lat,
@@ -977,6 +1003,7 @@ useEffect(() => {
         roll: 0.0,
       },
     };
+    const initialHomeView = isMapPath ? mapInitialView : overviewInitialView;
 
     setPartBubble(null);
     setBubbleAnchor(null);
