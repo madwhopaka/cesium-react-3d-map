@@ -9,6 +9,7 @@ import { MODEL_LOOKUP } from "../constants/models";
 import { normalizeNodeName } from "../helpers/helper";
 import PartBubble from "./Cesium/PartsModal";
 import TowerBubble from "./Cesium/TowerModal";
+import LoadingScreen from "./Cesium/LoadingScreen";
 
 export default function ModelViewer({
   autoRotate = true,
@@ -211,19 +212,9 @@ export default function ModelViewer({
         node = node.parent;
       }
 
-      setPartBubble({
-        label: fallbackLabel,
-        manufacturer: "",
-        position: "Inside 3D model",
-        purpose: "Selected model component",
-        detailedPurpose: "This mesh is part of the current tower model.",
-        material: "",
-        lifeDuration: "",
-        icon: "◼",
-      });
-      setBubbleAnchor({
-        x: event.clientX,
-        y: event.clientY,
+      console.log("[ModelViewer PartBubble] Unmapped node:", {
+        modelId: model.id,
+        fallbackLabel,
       });
     };
 
@@ -368,45 +359,7 @@ export default function ModelViewer({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: VIEWER_BG, color: '#1f1f1f', fontFamily: '"DM Sans", "Segoe UI", system-ui, sans-serif' }}>
-      {/* Loading Screen */}
-      {isLoading && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(245, 245, 245, 0.96)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          gap: '24px',
-        }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            border: '4px solid #d4d4d4',
-            borderTop: '4px solid #6b6b6b',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }} />
-          <div style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#1f1f1f',
-          }}>
-            Loading 3D Model…
-          </div>
-          <style>
-            {`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}
-          </style>
-        </div>
-      )}
+      <LoadingScreen isVisible={isLoading} />
 
       {!isInIframe && (
         <Link

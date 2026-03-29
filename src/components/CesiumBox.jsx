@@ -600,18 +600,29 @@ export default function CesiumMap({
           const modelId = picked.id.modelId;
           const model = MODEL_LOOKUP[modelId];
           if (model) {
-            const raw = picked.detail.node._name;
+            const raw =
+              picked.detail.node?._name ||
+              picked.detail.node?.name ||
+              picked.detail.node?.id ||
+              "unknown-node";
             const key = normalizeNodeName(raw);
             const part = model.parts?.[key] || model.parts?.[raw];
             if (part) {
+              const canvasRect = viewer.scene.canvas.getBoundingClientRect();
               setPartBubble(part);
             
               setBubbleAnchor({
-                x: movement.position.x,
-                y: movement.position.y,
+                x: canvasRect.left + movement.position.x,
+                y: canvasRect.top + movement.position.y,
               });
               return;
             }
+
+            console.log("[Map PartBubble] Unmapped node:", {
+              modelId,
+              rawNodeName: raw,
+              normalizedKey: key,
+            });
           }
         }
 
@@ -1810,16 +1821,26 @@ useEffect(() => {
             </button>
 
             {/* GLB Viewer iframe */}
-            <iframe
-              src={`/model-viewer/${activeModelRef.current.id}`}
+            <div
               style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                borderRadius: '24px',
+                position: 'absolute',
+                top: '56px',
+                left: 0,
+                right: 0,
+                bottom: 0,
               }}
-              title="3D Model Viewer"
-            />
+            >
+              <iframe
+                src={`/model-viewer/${activeModelRef.current.id}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  borderRadius: '0 0 24px 24px',
+                }}
+                title="3D Model Viewer"
+              />
+            </div>
           </div>
         </div>
       )}

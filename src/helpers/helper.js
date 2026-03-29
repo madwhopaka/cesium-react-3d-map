@@ -70,7 +70,6 @@ export function computeBubblePosition({
   let top = anchorY - 24;
 
   let tailHorizontal = "left";   // tail points left → bubble on right
-  let tailVertical = "top";
 
   /* ---------- Horizontal logic ---------- */
 
@@ -91,7 +90,6 @@ export function computeBubblePosition({
   // Overflow bottom → move above
   if (top + bubbleHeight > viewportH - margin) {
     top = anchorY - bubbleHeight - tailOffset;
-    tailVertical = "bottom";
   }
 
   // Clamp vertically
@@ -100,10 +98,14 @@ export function computeBubblePosition({
     Math.min(top, viewportH - bubbleHeight - margin)
   );
 
+  // Keep the tail aligned with the click point as much as possible.
+  const rawTailTop = anchorY - top - 12; // 12 is half tail height
+  const tailTop = Math.max(16, Math.min(rawTailTop, bubbleHeight - 40));
+
   return {
     left,
     top,
     tailHorizontal, // "left" | "right"
-    tailVertical,   // "top" | "bottom"
+    tailTop,
   };
 }

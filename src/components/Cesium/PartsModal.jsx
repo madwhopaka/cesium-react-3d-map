@@ -8,7 +8,7 @@ export default function PartBubble({ bubble, anchor, onClose }) {
     left,
     top,
     tailHorizontal,
-    tailVertical,
+    tailTop,
   } = computeBubblePosition({
     anchorX: anchor?.x,
     anchorY: anchor?.y,
@@ -71,8 +71,7 @@ export default function PartBubble({ bubble, anchor, onClose }) {
         <div
           style={{
             position: "absolute",
-            top: tailVertical === "top" ? 22 : "auto",
-            bottom: tailVertical === "bottom" ? 22 : "auto",
+            top: tailTop,
             [tailHorizontal === "left" ? "left" : "right"]: -12,
             width: 0,
             height: 0,
