@@ -186,6 +186,53 @@ export default function CesiumMap({
     });
   }, [overviewRows, overviewSearch]);
 
+  const overviewSummaryCards = useMemo(() => {
+    const maintenanceCount = overviewRows.filter((row) =>
+      String(row.status).toLowerCase().includes("maintenance")
+    ).length;
+    const offlineCount = overviewRows.filter((row) =>
+      String(row.status).toLowerCase().includes("offline")
+    ).length;
+    const activeCount = overviewRows.filter((row) =>
+      String(row.status).toLowerCase().includes("active")
+    ).length;
+
+    return [
+      {
+        id: "maintenance",
+        label: "Maintenance due",
+        count: maintenanceCount,
+        textColor: "#C50B2F",
+        bgColor: "#C50B2F14",
+        icon: "🛡",
+      },
+      {
+        id: "offline",
+        label: "Offline towers",
+        count: offlineCount,
+        textColor: "#B25A20",
+        bgColor: "#B25A2014",
+        icon: "🔧",
+      },
+      {
+        id: "active",
+        label: "Active towers",
+        count: activeCount,
+        textColor: "#136B36",
+        bgColor: "#136B3614",
+        icon: "⚡",
+      },
+      {
+        id: "all",
+        label: "All towers",
+        count: overviewRows.length,
+        textColor: "#141113",
+        bgColor: "#14111310",
+        icon: "⟲",
+      },
+    ];
+  }, [overviewRows]);
+
   /* ---------------- INIT ---------------- */
   useEffect(() => {
     let viewer;
@@ -1013,11 +1060,70 @@ useEffect(() => {
         onSetRenderProfile={setRenderProfile}
       />
 
+      {isOverviewOpen && (
+        <section
+          style={{
+            position: "fixed",
+            top: 20,
+            left: sidebarWidth + 16,
+            right: 16,
+            zIndex: 22,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 12,
+            pointerEvents: "none",
+          }}
+        >
+          {overviewSummaryCards.map((card) => (
+            <article
+              key={card.id}
+              style={{
+                background: card.bgColor,
+                borderRadius: 0,
+                border: "1px solid rgba(20,17,19,0.08)",
+                borderLeft: `3px solid ${card.textColor}`,
+                padding: "10px 14px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                minHeight: 74,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  color: card.textColor,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  lineHeight: 1,
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 13 }}>{card.icon}</span>
+                <span>{card.label}</span>
+              </div>
+              <strong
+                style={{
+                  color: "#141113",
+                  fontSize: 31,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  marginLeft: 18,
+                }}
+              >
+                {card.count}
+              </strong>
+            </article>
+          ))}
+        </section>
+      )}
+
       <div
         ref={containerRef}
         style={{
           position: "fixed",
-          top: isOverviewOpen ? 12 : 0,
+          top: isOverviewOpen ? 108 : 0,
           left: isOverviewOpen ? sidebarWidth + 12 : sidebarWidth,
           right: isOverviewOpen ? 12 : 0,
           bottom: isOverviewOpen ? "calc(50vh + 8px)" : 0,
