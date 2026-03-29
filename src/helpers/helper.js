@@ -58,13 +58,16 @@ export const getDistanceToModel = (model, cameraPos, Cesium) => {
 export function computeBubblePosition({
   anchorX,
   anchorY,
+  bounds,
   bubbleWidth = 320,  // Updated from 300 to match PartBubble
   bubbleHeight = 400, // Updated from 320 to match PartBubble
   margin = 12,
   tailOffset = 18,
 }) {
-  const viewportW = window.innerWidth;
-  const viewportH = window.innerHeight;
+  const minX = bounds?.left ?? 0;
+  const maxX = bounds?.right ?? window.innerWidth;
+  const minY = bounds?.top ?? 0;
+  const maxY = bounds?.bottom ?? window.innerHeight;
 
   let left = anchorX + tailOffset;
   let top = anchorY - 24;
@@ -74,28 +77,28 @@ export function computeBubblePosition({
   /* ---------- Horizontal logic ---------- */
 
   // Overflow right → flip to left
-  if (left + bubbleWidth > viewportW - margin) {
+  if (left + bubbleWidth > maxX - margin) {
     left = anchorX - bubbleWidth - tailOffset;
     tailHorizontal = "right";
   }
 
   // Clamp horizontally
   left = Math.max(
-    margin,
-    Math.min(left, viewportW - bubbleWidth - margin)
+    minX + margin,
+    Math.min(left, maxX - bubbleWidth - margin)
   );
 
   /* ---------- Vertical logic ---------- */
 
   // Overflow bottom → move above
-  if (top + bubbleHeight > viewportH - margin) {
+  if (top + bubbleHeight > maxY - margin) {
     top = anchorY - bubbleHeight - tailOffset;
   }
 
   // Clamp vertically
   top = Math.max(
-    margin,
-    Math.min(top, viewportH - bubbleHeight - margin)
+    minY + margin,
+    Math.min(top, maxY - bubbleHeight - margin)
   );
 
   // Keep the tail aligned with the click point as much as possible.

@@ -12,6 +12,7 @@ export default function PartBubble({ bubble, anchor, onClose }) {
   } = computeBubblePosition({
     anchorX: anchor?.x,
     anchorY: anchor?.y,
+    bounds: anchor?.bounds,
   });
 
   useEffect(() => {

@@ -608,12 +608,34 @@ export default function CesiumMap({
             const key = normalizeNodeName(raw);
             const part = model.parts?.[key] || model.parts?.[raw];
             if (part) {
-              const canvasRect = viewer.scene.canvas.getBoundingClientRect();
+              const canvas = viewer.scene.canvas;
+              const canvasRect = canvas.getBoundingClientRect();
+
+              // Cesium click coords can vary between CSS pixels and drawing buffer pixels.
+              // Normalize to CSS pixels, then convert to viewport coordinates.
+              const dprScaleX = canvas.clientWidth > 0 ? canvas.clientWidth / (canvas.width || canvas.clientWidth) : 1;
+              const dprScaleY = canvas.clientHeight > 0 ? canvas.clientHeight / (canvas.height || canvas.clientHeight) : 1;
+
+              const clickXInCanvas =
+                canvas.width > canvas.clientWidth + 1 && movement.position.x > canvas.clientWidth + 1
+                  ? movement.position.x * dprScaleX
+                  : movement.position.x;
+              const clickYInCanvas =
+                canvas.height > canvas.clientHeight + 1 && movement.position.y > canvas.clientHeight + 1
+                  ? movement.position.y * dprScaleY
+                  : movement.position.y;
+
               setPartBubble(part);
             
               setBubbleAnchor({
-                x: canvasRect.left + movement.position.x,
-                y: canvasRect.top + movement.position.y,
+                x: canvasRect.left + clickXInCanvas,
+                y: canvasRect.top + clickYInCanvas,
+                bounds: {
+                  left: canvasRect.left,
+                  top: canvasRect.top,
+                  right: canvasRect.right,
+                  bottom: canvasRect.bottom,
+                },
               });
               return;
             }
