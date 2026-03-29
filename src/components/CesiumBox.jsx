@@ -859,13 +859,15 @@ useEffect(() => {
     setShowMiniViewer(false);
     activeModelRef.current = null;
 
-    viewer.camera.setView(homeViewRef.current);
-
-    if (viewer.cameraChangeListener) {
-      viewer.cameraChangeListener();
-    }
-
-    viewer.scene.requestRender();
+    viewer.camera.flyTo({
+      ...homeViewRef.current,
+      duration: 1.6,
+      complete: () => {
+        if (viewer.cameraChangeListener) {
+          viewer.cameraChangeListener();
+        }
+      },
+    });
   };
 
   const zoomInManually = () => {

@@ -297,7 +297,7 @@ export default function TowersPage({
           <section
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
               gap: 10,
             }}
           >
@@ -310,11 +310,11 @@ export default function TowersPage({
                   borderRadius: 4,
                   border: filterValue === card.filterValue ? `1px solid ${card.textColor}` : "1px solid #F0F0F0",
                   borderLeft: `3px solid ${card.textColor}`,
-                  padding: "7px 10px",
+                  padding: "10px 12px",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 2,
-                  minHeight: 52,
+                  gap: 5,
+                  minHeight: 68,
                   cursor: "pointer",
                 }}
               >
@@ -324,21 +324,21 @@ export default function TowersPage({
                     alignItems: "center",
                     gap: 6,
                     color: card.textColor,
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 600,
                     lineHeight: 1,
                   }}
                 >
-                  <span aria-hidden="true" style={{ fontSize: 10 }}>{card.icon}</span>
+                  <span aria-hidden="true" style={{ fontSize: 12 }}>{card.icon}</span>
                   <span>{card.label}</span>
                 </div>
                 <strong
                   style={{
                     color: "#141113",
-                    fontSize: 17,
+                    fontSize: 22,
                     fontWeight: 700,
                     lineHeight: 1,
-                    marginLeft: 16,
+                    marginLeft: 18,
                   }}
                 >
                   {card.count}
