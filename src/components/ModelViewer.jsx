@@ -344,7 +344,7 @@ export default function ModelViewer({
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: VIEWER_BG, color: '#1f1f1f', fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: VIEWER_BG, color: '#1f1f1f', fontFamily: '"DM Sans", "Segoe UI", system-ui, sans-serif' }}>
       {/* Loading Screen */}
       {isLoading && (
         <div style={{

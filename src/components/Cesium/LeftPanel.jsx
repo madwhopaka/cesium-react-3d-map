@@ -142,24 +142,13 @@ export default function ModelsPanel({
         {isOpen ? (
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
             <img
-              src="/images/PointAi.png"
+              src="/images/point-ai-open.png"
               alt="PointAI"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                objectFit: "cover",
+                width:'70%', 
                 flexShrink: 0,
               }}
             />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.2, lineHeight: 1.2, color: "#000000" }}>
-                 Point AI 
-              </div>
-              <div style={{ fontSize: 12, color: "#757575", marginTop: 4 }}>
-                Search and jump between towers
-              </div>
-            </div>
           </div>
         ) : (
           <button
@@ -180,7 +169,7 @@ export default function ModelsPanel({
             }}
           >
             <img
-              src="/images/PointAI.png"
+              src="/images/point-ai-closed.PNG"
               alt="PointAI"
               style={{
                 width: 40,

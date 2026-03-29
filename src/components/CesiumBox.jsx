@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Bell, Search } from "lucide-react";
+import { ArrowLeft, Bell, MoveLeft, Search } from "lucide-react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -1092,8 +1092,28 @@ useEffect(() => {
           }}
         >
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <ArrowLeft color="#121212" />
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#141113", lineHeight: 1.1 }}>Overview</h1>
+            {panelOpen && (
+              <button
+                type="button"
+                onClick={() => setPanelOpen(false)}
+                aria-label="Close sidebar"
+                title="Close sidebar"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  display: "inline-flex",
+                  marginRight: 15,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#121212",
+                }}
+              >
+                <MoveLeft color="currentColor" />
+              </button>
+            )}
+            <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#141113", lineHeight: 1.1 }}>Overview</h1>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "0 1 520px" }}>
@@ -1130,8 +1150,8 @@ useEffect(() => {
             <span
               style={{
                 position: "relative",
-                width: 30,
-                height: 30,
+                width: 36,
+                height: 36,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1140,21 +1160,21 @@ useEffect(() => {
               aria-label="Notifications"
               title="Notifications"
             >
-              <Bell size={16} strokeWidth={1.9} aria-hidden="true" />
+              <Bell size={20} strokeWidth={1.9} aria-hidden="true" />
               <span
                 style={{
                   position: "absolute",
-                  top: 1,
-                  right: 0,
-                  width: 6,
-                  height: 6,
+                  top: 2,
+                  right: 1,
+                  width: 9,
+                  height: 9,
                   borderRadius: 999,
                   background: "#FF003D",
                   border: "1px solid #FFFFFF",
                 }}
               />
             </span>
-            <span style={{ width: 22, height: 22, borderRadius: 999, background: "#136B36", color: "#FFFFFF", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>T</span>
+            <span style={{ width: 30, height: 30, borderRadius: 999, background: "#136B36", color: "#FFFFFF", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>T</span>
           </div>
         </section>
       )}

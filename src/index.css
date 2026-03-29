@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,7 +12,7 @@ html {
 body {
   margin: 0;
   background: #1F1C1C;
-  font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "DM Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -23,7 +25,7 @@ code {
 /* Global scrollbar theme */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #FF0091 #F7F7F7;
+  scrollbar-color: #666365 #F7F7F7;
 }
 
 *::-webkit-scrollbar {

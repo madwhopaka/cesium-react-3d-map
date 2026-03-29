@@ -51,7 +51,7 @@ export default function TowerBubble({ tower, visible, onOpenInWindow, showModelV
         flexDirection: "column",
         overflow: "hidden",
         pointerEvents: "auto",
-        fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
+        fontFamily: '"DM Sans", "Segoe UI", system-ui, sans-serif',
       }}
     >
       <div

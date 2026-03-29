@@ -64,7 +64,7 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
           display: "flex",
           flexDirection: "column",
-          fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
+          fontFamily: '"DM Sans", "Segoe UI", system-ui, sans-serif',
         }}
       >
         {/* Tail */}
