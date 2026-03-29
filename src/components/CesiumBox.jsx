@@ -437,6 +437,39 @@ export default function CesiumMap({
 
       viewer.camera.setView(homeViewRef.current);
 
+      const logCurrentCameraView = () => {
+        const camera = viewer.camera;
+        const cartographic = camera.positionCartographic;
+        if (!cartographic) return;
+
+        const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+        const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+        const altitude = cartographic.height;
+        const heading = Cesium.Math.toDegrees(camera.heading);
+        const pitch = Cesium.Math.toDegrees(camera.pitch);
+        const roll = Cesium.Math.toDegrees(camera.roll);
+
+        console.log(
+          "[Cesium Camera]",
+          JSON.stringify(
+            {
+              longitude: Number(longitude.toFixed(6)),
+              latitude: Number(latitude.toFixed(6)),
+              altitude: Number(altitude.toFixed(2)),
+              heading: Number(heading.toFixed(2)),
+              pitch: Number(pitch.toFixed(2)),
+              roll: Number(roll.toFixed(2)),
+            },
+            null,
+            2
+          )
+        );
+      };
+
+      viewer.cameraLogMoveEndListener = logCurrentCameraView;
+      viewer.camera.moveEnd.addEventListener(logCurrentCameraView);
+      logCurrentCameraView();
+
 
       setEntitiesReady(true);
 
@@ -695,7 +728,15 @@ export default function CesiumMap({
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     };
     init();
-    return () => viewer && !viewer.isDestroyed() && viewer.destroy();
+    return () => {
+      if (!viewer || viewer.isDestroyed()) return;
+
+      if (viewer.cameraLogMoveEndListener) {
+        viewer.camera.moveEnd.removeEventListener(viewer.cameraLogMoveEndListener);
+      }
+
+      viewer.destroy();
+    };
   }, []);
 
   /* ---------------- LOADER ORCHESTRATION ---------------- */
