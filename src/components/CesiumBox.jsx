@@ -81,6 +81,7 @@ export default function CesiumMap({
       : setLocalRenderProfile;
   const cloudLayerRef = useRef(null); // Track cloud layer entity
   const hoverCardHideTimeoutRef = useRef(null);
+  const transitionLoaderHideTimeoutRef = useRef(null);
   const previousPathRef = useRef(location.pathname);
   const skipNextOverviewMapResetRef = useRef(false);
   const sidebarWidth = panelOpen ? 248 : 68;
@@ -840,6 +841,20 @@ useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !homeViewRef.current) return;
 
+    if (transitionLoaderHideTimeoutRef.current) {
+      window.clearTimeout(transitionLoaderHideTimeoutRef.current);
+      transitionLoaderHideTimeoutRef.current = null;
+    }
+
+    const loaderStartedAt = Date.now();
+    const minLoaderVisibleMs = 450;
+    const isMapPath = location.pathname === "/map" || location.pathname.startsWith("/map/");
+
+    if (isMapPath) {
+      setIsLoading3D(true);
+      isFlyingRef.current = true;
+    }
+
     setPartBubble(null);
     setBubbleAnchor(null);
     setTowerBubble(null);
@@ -854,7 +869,39 @@ useEffect(() => {
           viewer.cameraChangeListener();
         }
 
+        if (isMapPath) {
+          isFlyingRef.current = false;
+          skipNextOverviewMapResetRef.current = true;
+          const elapsed = Date.now() - loaderStartedAt;
+          const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+          if (remaining === 0) {
+            setIsLoading3D(false);
+          } else {
+            transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+              setIsLoading3D(false);
+              transitionLoaderHideTimeoutRef.current = null;
+            }, remaining);
+          }
+        }
+
         navigate("/", { replace: true });
+      },
+      cancel: () => {
+        if (!isMapPath) return;
+
+        isFlyingRef.current = false;
+        const elapsed = Date.now() - loaderStartedAt;
+        const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+        if (remaining === 0) {
+          setIsLoading3D(false);
+        } else {
+          transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+            setIsLoading3D(false);
+            transitionLoaderHideTimeoutRef.current = null;
+          }, remaining);
+        }
       },
     });
 
@@ -864,6 +911,17 @@ useEffect(() => {
   const resetToInitialGlobeView = () => {
     const viewer = viewerRef.current;
     if (!viewer) return;
+
+    if (transitionLoaderHideTimeoutRef.current) {
+      window.clearTimeout(transitionLoaderHideTimeoutRef.current);
+      transitionLoaderHideTimeoutRef.current = null;
+    }
+
+    const loaderStartedAt = Date.now();
+    const minLoaderVisibleMs = 450;
+
+    setIsLoading3D(true);
+    isFlyingRef.current = true;
 
     const first = MODELS[0];
     const initialHomeView = homeViewRef.current || {
@@ -892,6 +950,35 @@ useEffect(() => {
       complete: () => {
         if (viewer.cameraChangeListener) {
           viewer.cameraChangeListener();
+        }
+
+        isFlyingRef.current = false;
+
+        const elapsed = Date.now() - loaderStartedAt;
+        const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+        if (remaining === 0) {
+          setIsLoading3D(false);
+        } else {
+          transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+            setIsLoading3D(false);
+            transitionLoaderHideTimeoutRef.current = null;
+          }, remaining);
+        }
+      },
+      cancel: () => {
+        isFlyingRef.current = false;
+
+        const elapsed = Date.now() - loaderStartedAt;
+        const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+        if (remaining === 0) {
+          setIsLoading3D(false);
+        } else {
+          transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+            setIsLoading3D(false);
+            transitionLoaderHideTimeoutRef.current = null;
+          }, remaining);
         }
       },
     });
@@ -989,6 +1076,14 @@ useEffect(() => {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [showMiniViewer]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionLoaderHideTimeoutRef.current) {
+        window.clearTimeout(transitionLoaderHideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   /* ---------------- LISTEN FOR IFRAME CLOSE MESSAGE ---------------- */
   useEffect(() => {
