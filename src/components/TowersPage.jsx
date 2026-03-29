@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { MODELS } from "../constants/models";
 import ModelsPanel from "./Cesium/LeftPanel";
@@ -14,6 +15,7 @@ function statusTone(status) {
 }
 
 const FILTER_OPTIONS = ["All", "Active", "Offline", "Maintenance due"];
+const DETAIL_FILTER_OPTIONS = FILTER_OPTIONS.filter((option) => option !== "All");
 
 function matchesFilter(status, filter) {
   const normalizedStatus = String(status || "").toLowerCase();
@@ -44,10 +46,12 @@ export default function TowersPage({
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState(["All"]);
+  const [detailFilters, setDetailFilters] = useState([]);
   const [towerSearch, setTowerSearch] = useState("");
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const filterMenuRef = useRef(null);
   const navigate = useNavigate();
+  const isAllTowersSelected = selectedFilters.includes("All");
 
   const selectedFiltersFromQuery = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -58,7 +62,7 @@ export default function TowersPage({
       .filter((value, index, array) => FILTER_OPTIONS.includes(value) && array.indexOf(value) === index);
 
     if (mapped.length === 0 || mapped.includes("All")) return ["All"];
-    return mapped;
+    return [mapped[0]];
   }, [location.search]);
 
   useEffect(() => {
@@ -76,6 +80,12 @@ export default function TowersPage({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
+  useEffect(() => {
+    if (!isAllTowersSelected) {
+      setIsFilterMenuOpen(false);
+    }
+  }, [isAllTowersSelected]);
+
   const rows = useMemo(() => {
     return MODELS.map((model) => ({
       model,
@@ -88,10 +98,11 @@ export default function TowersPage({
   }, []);
 
   const filteredRows = useMemo(() => {
-    const statusFilteredRows =
-      selectedFilters.includes("All")
-        ? rows
-        : rows.filter((row) => selectedFilters.some((filter) => matchesFilter(row.status, filter)));
+    const statusFilteredRows = isAllTowersSelected
+      ? detailFilters.length > 0
+        ? rows.filter((row) => detailFilters.some((filter) => matchesFilter(row.status, filter)))
+        : rows
+      : rows.filter((row) => selectedFilters.some((filter) => matchesFilter(row.status, filter)));
 
     const query = towerSearch.trim().toLowerCase();
     if (!query) return statusFilteredRows;
@@ -109,7 +120,15 @@ export default function TowersPage({
         .toLowerCase()
         .includes(query)
     );
-  }, [selectedFilters, rows, towerSearch]);
+  }, [detailFilters, isAllTowersSelected, selectedFilters, rows, towerSearch]);
+
+  const toggleDetailFilter = (nextFilter) => {
+    setDetailFilters((previous) =>
+      previous.includes(nextFilter)
+        ? previous.filter((value) => value !== nextFilter)
+        : [...previous, nextFilter]
+    );
+  };
 
   const dashboardStats = useMemo(() => {
     const maintenanceCount = rows.filter((row) => String(row.status).toLowerCase().includes("maintenance")).length;
@@ -167,29 +186,11 @@ export default function TowersPage({
   }, [rows]);
 
   const applyTowerFilter = (nextFilter) => {
-    setSelectedFilters((previous) => {
-      let nextFilters;
+    const nextFilters = [nextFilter === "All" ? "All" : nextFilter];
+    const queryValue = nextFilters[0] === "All" ? "all" : filterToQueryToken(nextFilters[0]);
 
-      if (nextFilter === "All") {
-        nextFilters = ["All"];
-      } else {
-        const previousWithoutAll = previous.filter((value) => value !== "All");
-        nextFilters = previousWithoutAll.includes(nextFilter)
-          ? previousWithoutAll.filter((value) => value !== nextFilter)
-          : [...previousWithoutAll, nextFilter];
-
-        if (nextFilters.length === 0) {
-          nextFilters = ["All"];
-        }
-      }
-
-      const queryValue = nextFilters.includes("All")
-        ? "all"
-        : nextFilters.map((filter) => filterToQueryToken(filter)).join(",");
-
-      navigate(`/towers?filter=${queryValue}`, { replace: true });
-      return nextFilters;
-    });
+    navigate(`/towers?filter=${queryValue}`, { replace: true });
+    setSelectedFilters(nextFilters);
   };
 
   const RENDER_PROFILE_LABELS = {
@@ -272,7 +273,7 @@ export default function TowersPage({
               borderRadius: 24,
               background: "#FFFFFF",
               border: "1px solid #F0F0F0",
-              boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
+              // boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
               display: "flex",
               flexDirection: "column",
               flex: 1,
@@ -291,86 +292,108 @@ export default function TowersPage({
             >
               <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2, color: "#141113" }}>Network tower List</h2>
 
-              <div
-                ref={filterMenuRef}
-                style={{
-                  display: "flex",
-                  position: "relative",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#141113",
-                  fontSize: 13,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setIsFilterMenuOpen((value) => !value)}
-                  aria-label="Filter towers by status"
+              {isAllTowersSelected && (
+                <div
+                  ref={filterMenuRef}
                   style={{
-                    minWidth: 186,
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    border: "1px solid #F0F0F0",
-                    background: "#FFFFFF",
-                    color: "#141113",
-                    outline: "none",
-                    fontSize: 13,
-                    cursor: "pointer",
-                    lineHeight: 1.2,
-                    textAlign: "left",
-                    display: "inline-flex",
+                    display: "flex",
+                    position: "relative",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
+                    gap: 8,
+                    color: "#141113",
+                    fontSize: 13,
                   }}
                 >
-                  <span>
-                    {selectedFilters.includes("All") ? "All" : selectedFilters.join(", ")}
-                  </span>
-                  <span aria-hidden="true">▾</span>
-                </button>
-
-                {isFilterMenuOpen && (
-                  <div
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterMenuOpen((value) => !value)}
+                    aria-label="Filter towers by status"
                     style={{
-                      position: "absolute",
-                      top: "calc(100% + 8px)",
-                      right: 0,
-                      minWidth: 220,
-                      padding: 10,
+                      minWidth: 186,
+                      padding: "8px 10px",
                       borderRadius: 10,
                       border: "1px solid #F0F0F0",
                       background: "#FFFFFF",
-                      boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
-                      zIndex: 20,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
+                      color: "#141113",
+                      outline: "none",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      lineHeight: 1.2,
+                      textAlign: "left",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
                     }}
                   >
-                    {FILTER_OPTIONS.map((option) => (
-                      <label
-                        key={option}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          fontSize: 13,
-                          color: "#141113",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedFilters.includes(option)}
-                          onChange={() => applyTowerFilter(option)}
-                        />
-                        <span>{option}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    <span>{detailFilters.length > 0 ? detailFilters.join(", ") : "All"}</span>
+                    <span aria-hidden="true">▾</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailFilters([])}
+                    aria-label="Clear status filters"
+                    title="Clear filters"
+                    disabled={detailFilters.length === 0}
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 10,
+                      border: "1px solid #F0F0F0",
+                      background: "#FFFFFF",
+                      color: detailFilters.length > 0 ? "#141113" : "#B0B0B0",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: detailFilters.length > 0 ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    <X size={15} aria-hidden="true" />
+                  </button>
+
+                  {isFilterMenuOpen && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 8px)",
+                        right: 0,
+                        minWidth: 220,
+                        padding: 10,
+                        borderRadius: 10,
+                        border: "1px solid #F0F0F0",
+                        background: "#FFFFFF",
+                        boxShadow: "0 10px 24px rgba(20,17,19,0.08)",
+                        zIndex: 20,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      {DETAIL_FILTER_OPTIONS.map((option) => (
+                        <label
+                          key={option}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                            fontSize: 13,
+                            color: "#141113",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={detailFilters.includes(option)}
+                            onChange={() => toggleDetailFilter(option)}
+                          />
+                          <span>{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div id="tower-details" style={{ overflow: "auto", flex: 1, minHeight: 0 }}>

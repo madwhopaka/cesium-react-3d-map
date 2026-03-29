@@ -20,7 +20,7 @@ const NOTIFICATION_ITEMS = [
     unread: true,
     title: "Antenna Misalignment",
     time: "3 min ago",
-    tower_id: "SICA001139",
+    tower_id: "SICO001139",
     description: [
       "The antenna positioning appears to be off-angle, which may affect signal performance.",
       "A prompt realignment check is recommended to restore optimal connectivity.",
@@ -52,6 +52,12 @@ export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel 
       location: towerMetaById[item.tower_id]?.location || "Unknown",
     }));
   }, [towerMetaById]);
+
+  const unreadCount = useMemo(
+    () => notifications.reduce((count, item) => count + (item.unread ? 1 : 0), 0),
+    [notifications]
+  );
+  const unreadBadgeText = unreadCount > 99 ? "99+" : `${unreadCount}`;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -101,6 +107,7 @@ export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel 
         onClick={() => setIsOpen((value) => !value)}
         aria-label="Notifications"
         aria-expanded={isOpen}
+        aria-live="polite"
         title="Notifications"
         style={{
           border: "none",
@@ -116,18 +123,31 @@ export default function NotificationBellPopup({ towerMetaById = {}, dialogLabel 
         }}
       >
         <Bell size={20} strokeWidth={1.9} aria-hidden="true" />
-        <span
-          style={{
-            position: "absolute",
-            top: 2,
-            right: 1,
-            width: 9,
-            height: 9,
-            borderRadius: 999,
-            background: "#FF003D",
-            border: "1px solid #FFFFFF",
-          }}
-        />
+        {unreadCount > 0 && (
+          <span
+            aria-label={`${unreadCount} unread notifications`}
+            style={{
+              position: "absolute",
+              top: -1,
+              right: -2,
+              minWidth: 17,
+              height: 17,
+              padding: "0 5px",
+              borderRadius: 999,
+              background: "#FF003D",
+              border: "1px solid #FFFFFF",
+              color: "#FFFFFF",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
+          >
+            {unreadBadgeText}
+          </span>
+        )}
       </button>
 
       {isOpen && (
