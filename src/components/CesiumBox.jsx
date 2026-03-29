@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Bell, ExternalLink, MoveLeft, Search } from "lucide-react";
+import { ArrowLeft, ExternalLink, MoveLeft } from "lucide-react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -18,6 +18,8 @@ import {
 import { normalizeNodeName } from "../helpers/helper";
 import PartBubble from "./Cesium/PartsModal";
 import TowerBubble from "./Cesium/TowerModal";
+import CommonHeader from "./CommonHeader";
+import DashboardStatusCards from "./DashboardStatusCards";
 
 Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 
@@ -79,6 +81,7 @@ export default function CesiumMap({
       : setLocalRenderProfile;
   const cloudLayerRef = useRef(null); // Track cloud layer entity
   const hoverCardHideTimeoutRef = useRef(null);
+  const transitionLoaderHideTimeoutRef = useRef(null);
   const previousPathRef = useRef(location.pathname);
   const skipNextOverviewMapResetRef = useRef(false);
   const sidebarWidth = panelOpen ? 248 : 68;
@@ -185,6 +188,16 @@ export default function CesiumMap({
     });
   }, [overviewRows, overviewSearch]);
 
+  const towerMetaById = useMemo(() => {
+    return overviewRows.reduce((accumulator, row) => {
+      accumulator[row.model.id] = {
+        name: row.model.name || `Tower ${row.model.id}`,
+        location: row.location || "Unknown",
+      };
+      return accumulator;
+    }, {});
+  }, [overviewRows]);
+
   const overviewSummaryCards = useMemo(() => {
     const maintenanceCount = overviewRows.filter((row) =>
       String(row.status).toLowerCase().includes("maintenance")
@@ -203,7 +216,7 @@ export default function CesiumMap({
         count: maintenanceCount,
         textColor: "#C50B2F",
         bgColor: "#C50B2F14",
-        icon: "🛡",
+        iconKey: "maintenance",
       },
       {
         id: "offline",
@@ -211,7 +224,7 @@ export default function CesiumMap({
         count: offlineCount,
         textColor: "#B25A20",
         bgColor: "#B25A2014",
-        icon: "🔧",
+        iconKey: "offline",
       },
       {
         id: "active",
@@ -219,7 +232,7 @@ export default function CesiumMap({
         count: activeCount,
         textColor: "#136B36",
         bgColor: "#136B3614",
-        icon: "⚡",
+        iconKey: "active",
       },
       {
         id: "all",
@@ -227,7 +240,7 @@ export default function CesiumMap({
         count: overviewRows.length,
         textColor: "#141113",
         bgColor: "#14111310",
-        icon: "⟲",
+        iconKey: "all",
       },
     ];
   }, [overviewRows]);
@@ -828,6 +841,20 @@ useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !homeViewRef.current) return;
 
+    if (transitionLoaderHideTimeoutRef.current) {
+      window.clearTimeout(transitionLoaderHideTimeoutRef.current);
+      transitionLoaderHideTimeoutRef.current = null;
+    }
+
+    const loaderStartedAt = Date.now();
+    const minLoaderVisibleMs = 450;
+    const isMapPath = location.pathname === "/map" || location.pathname.startsWith("/map/");
+
+    if (isMapPath) {
+      setIsLoading3D(true);
+      isFlyingRef.current = true;
+    }
+
     setPartBubble(null);
     setBubbleAnchor(null);
     setTowerBubble(null);
@@ -842,7 +869,39 @@ useEffect(() => {
           viewer.cameraChangeListener();
         }
 
+        if (isMapPath) {
+          isFlyingRef.current = false;
+          skipNextOverviewMapResetRef.current = true;
+          const elapsed = Date.now() - loaderStartedAt;
+          const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+          if (remaining === 0) {
+            setIsLoading3D(false);
+          } else {
+            transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+              setIsLoading3D(false);
+              transitionLoaderHideTimeoutRef.current = null;
+            }, remaining);
+          }
+        }
+
         navigate("/", { replace: true });
+      },
+      cancel: () => {
+        if (!isMapPath) return;
+
+        isFlyingRef.current = false;
+        const elapsed = Date.now() - loaderStartedAt;
+        const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+        if (remaining === 0) {
+          setIsLoading3D(false);
+        } else {
+          transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+            setIsLoading3D(false);
+            transitionLoaderHideTimeoutRef.current = null;
+          }, remaining);
+        }
       },
     });
 
@@ -851,21 +910,78 @@ useEffect(() => {
 
   const resetToInitialGlobeView = () => {
     const viewer = viewerRef.current;
-    if (!viewer || !homeViewRef.current) return;
+    if (!viewer) return;
+
+    if (transitionLoaderHideTimeoutRef.current) {
+      window.clearTimeout(transitionLoaderHideTimeoutRef.current);
+      transitionLoaderHideTimeoutRef.current = null;
+    }
+
+    const loaderStartedAt = Date.now();
+    const minLoaderVisibleMs = 450;
+
+    setIsLoading3D(true);
+    isFlyingRef.current = true;
+
+    const first = MODELS[0];
+    const initialHomeView = homeViewRef.current || {
+      destination: Cesium.Cartesian3.fromDegrees(
+        first.lon,
+        first.lat,
+        CESIUM_CONFIG.INITIAL_ALTITUDE
+      ),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-90),
+        roll: 0.0,
+      },
+    };
 
     setPartBubble(null);
     setBubbleAnchor(null);
     setTowerBubble(null);
     setShowMiniViewer(false);
     activeModelRef.current = null;
+    setPanelOpen(true);
 
-    viewer.camera.setView(homeViewRef.current);
+    viewer.camera.flyTo({
+      ...initialHomeView,
+      duration: 1.6,
+      complete: () => {
+        if (viewer.cameraChangeListener) {
+          viewer.cameraChangeListener();
+        }
 
-    if (viewer.cameraChangeListener) {
-      viewer.cameraChangeListener();
-    }
+        isFlyingRef.current = false;
 
-    viewer.scene.requestRender();
+        const elapsed = Date.now() - loaderStartedAt;
+        const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+        if (remaining === 0) {
+          setIsLoading3D(false);
+        } else {
+          transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+            setIsLoading3D(false);
+            transitionLoaderHideTimeoutRef.current = null;
+          }, remaining);
+        }
+      },
+      cancel: () => {
+        isFlyingRef.current = false;
+
+        const elapsed = Date.now() - loaderStartedAt;
+        const remaining = Math.max(0, minLoaderVisibleMs - elapsed);
+
+        if (remaining === 0) {
+          setIsLoading3D(false);
+        } else {
+          transitionLoaderHideTimeoutRef.current = window.setTimeout(() => {
+            setIsLoading3D(false);
+            transitionLoaderHideTimeoutRef.current = null;
+          }, remaining);
+        }
+      },
+    });
   };
 
   const zoomInManually = () => {
@@ -960,6 +1076,14 @@ useEffect(() => {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [showMiniViewer]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionLoaderHideTimeoutRef.current) {
+        window.clearTimeout(transitionLoaderHideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   /* ---------------- LISTEN FOR IFRAME CLOSE MESSAGE ---------------- */
   useEffect(() => {
@@ -1136,107 +1260,23 @@ useEffect(() => {
       )}
 
       {isOverviewOpen && (
-        <section
-          style={{
+        <CommonHeader
+          title="Overview"
+          showBackButton={panelOpen}
+          onBackButtonClick={() => setPanelOpen(false)}
+          searchValue={overviewSearch}
+          onSearchChange={setOverviewSearch}
+          searchAriaLabel="Search towers in overview"
+          notificationTowerMetaById={towerMetaById}
+          notificationDialogLabel="Overview notifications"
+          containerStyle={{
             position: "fixed",
             top: 0,
             left: sidebarWidth,
             right: 0,
-            zIndex: 24,
-            background: "#FFFFFF",
-            padding: "14px 18px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 14,
+            zIndex: 120,
           }}
-        >
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            {panelOpen && (
-              <button
-                type="button"
-                onClick={() => setPanelOpen(false)}
-                aria-label="Close sidebar"
-                title="Close sidebar"
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  padding: 0,
-                  display: "inline-flex",
-                  marginRight: 15,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: "#121212",
-                }}
-              >
-                <MoveLeft color="currentColor" />
-              </button>
-            )}
-            <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#141113", lineHeight: 1.1 }}>Overview</h1>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "0 1 520px" }}>
-            <label
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                background: "#F7F7F7",
-                border: "1px solid #F0F0F0",
-                borderRadius: 999,
-                padding: "9px 12px",
-              }}
-            >
-              <Search color="#000000" />
-              <input
-                type="text"
-                value={overviewSearch}
-                onChange={(event) => setOverviewSearch(event.target.value)}
-                placeholder="Search something"
-                aria-label="Search towers in overview"
-                style={{
-                  width: "100%",
-                  border: "none",
-                  background: "transparent",
-                  color: "#141113",
-                  outline: "none",
-                  fontSize: 13,
-                }}
-              />
-            </label>
-
-            <span
-              style={{
-                position: "relative",
-                width: 36,
-                height: 36,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#141113",
-              }}
-              aria-label="Notifications"
-              title="Notifications"
-            >
-              <Bell size={20} strokeWidth={1.9} aria-hidden="true" />
-              <span
-                style={{
-                  position: "absolute",
-                  top: 2,
-                  right: 1,
-                  width: 9,
-                  height: 9,
-                  borderRadius: 999,
-                  background: "#FF003D",
-                  border: "1px solid #FFFFFF",
-                }}
-              />
-            </span>
-            <span style={{ width: 30, height: 30, borderRadius: 999, background: "#136B36", color: "#FFFFFF", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>T</span>
-          </div>
-        </section>
+        />
       )}
 
       {isMapRoute && panelOpen && (
@@ -1272,56 +1312,13 @@ useEffect(() => {
             left: sidebarWidth + 16,
             right: 16,
             zIndex: 22,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            gap: 10,
             pointerEvents: "auto",
           }}
         >
-          {overviewSummaryCards.map((card) => (
-            <article
-              key={card.id}
-              onClick={() => navigate(`/towers?filter=${card.id}`)}
-              style={{
-                background: card.bgColor,
-                borderRadius: 4,
-                border: "1px solid #F0F0F0",
-                borderLeft: `3px solid ${card.textColor}`,
-                padding: "10px 12px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 5,
-                minHeight: 68,
-                cursor: "pointer",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  color: card.textColor,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  lineHeight: 1,
-                }}
-              >
-                <span aria-hidden="true" style={{ fontSize: 12 }}>{card.icon}</span>
-                <span>{card.label}</span>
-              </div>
-              <strong
-                style={{
-                  color: "#141113",
-                  fontSize: 22,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  marginLeft: 18,
-                }}
-              >
-                {card.count}
-              </strong>
-            </article>
-          ))}
+          <DashboardStatusCards
+            cards={overviewSummaryCards}
+            onCardClick={(card) => navigate(`/towers?filter=${card.id}`)}
+          />
         </section>
       )}
 
