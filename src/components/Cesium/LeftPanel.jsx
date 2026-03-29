@@ -121,8 +121,6 @@ export default function ModelsPanel({
         width: isOpen ? 248 : 68,
         background: "#F7F7F7",
         color: "#f5f5f5",
-        borderRight: "1px solid rgba(255, 255, 255, 0.06)",
-        boxShadow: "18px 0 60px rgba(0, 0, 0, 0.28)",
         backdropFilter: "blur(16px)",
         overflow: "hidden",
         transition:
@@ -135,7 +133,6 @@ export default function ModelsPanel({
       <div
         style={{
           padding: isOpen ? "18px 18px 16px" : "18px 12px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
           display: "flex",
           alignItems: "center",
           justifyContent: isOpen ? "space-between" : "center",
@@ -145,7 +142,7 @@ export default function ModelsPanel({
         {isOpen ? (
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
             <img
-              src="/images/PointAI.png"
+              src="/images/PointAi.png"
               alt="PointAI"
               style={{
                 width: 40,
@@ -153,7 +150,6 @@ export default function ModelsPanel({
                 borderRadius: 14,
                 objectFit: "cover",
                 flexShrink: 0,
-                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
               }}
             />
             <div style={{ minWidth: 0 }}>
@@ -191,7 +187,6 @@ export default function ModelsPanel({
                 height: 40,
                 borderRadius: 14,
                 objectFit: "cover",
-                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
               }}
             />
           </button>

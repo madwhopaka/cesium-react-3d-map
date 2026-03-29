@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Bell, Search } from "lucide-react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -1061,52 +1062,152 @@ useEffect(() => {
       />
 
       {isOverviewOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: sidebarWidth,
+            right: 0,
+            bottom: 0,
+            background: "#FFFFFF",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {isOverviewOpen && (
         <section
           style={{
             position: "fixed",
-            top: 20,
+            top: 0,
+            left: sidebarWidth,
+            right: 0,
+            zIndex: 24,
+            background: "#FFFFFF",
+            padding: "14px 18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 14,
+          }}
+        >
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <ArrowLeft color="#121212" />
+            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#141113", lineHeight: 1.1 }}>Overview</h1>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "0 1 520px" }}>
+            <label
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "#F7F7F7",
+                border: "1px solid #F0F0F0",
+                borderRadius: 999,
+                padding: "9px 12px",
+              }}
+            >
+              <Search color="#000000" />
+              <input
+                type="text"
+                value={overviewSearch}
+                onChange={(event) => setOverviewSearch(event.target.value)}
+                placeholder="Search something"
+                aria-label="Search towers in overview"
+                style={{
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  color: "#141113",
+                  outline: "none",
+                  fontSize: 13,
+                }}
+              />
+            </label>
+
+            <span
+              style={{
+                position: "relative",
+                width: 30,
+                height: 30,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#141113",
+              }}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell size={16} strokeWidth={1.9} aria-hidden="true" />
+              <span
+                style={{
+                  position: "absolute",
+                  top: 1,
+                  right: 0,
+                  width: 6,
+                  height: 6,
+                  borderRadius: 999,
+                  background: "#FF003D",
+                  border: "1px solid #FFFFFF",
+                }}
+              />
+            </span>
+            <span style={{ width: 22, height: 22, borderRadius: 999, background: "#136B36", color: "#FFFFFF", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>T</span>
+          </div>
+        </section>
+      )}
+
+      {isOverviewOpen && (
+        <section
+          style={{
+            position: "fixed",
+            top: 74,
             left: sidebarWidth + 16,
             right: 16,
             zIndex: 22,
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 12,
-            pointerEvents: "none",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 10,
+            pointerEvents: "auto",
           }}
         >
           {overviewSummaryCards.map((card) => (
             <article
               key={card.id}
+              onClick={() => navigate(`/towers?filter=${card.id}`)}
               style={{
                 background: card.bgColor,
-                borderRadius: 0,
-                border: "1px solid rgba(20,17,19,0.08)",
+                borderRadius: 4,
+                border: "1px solid #F0F0F0",
                 borderLeft: `3px solid ${card.textColor}`,
-                padding: "10px 14px",
+                padding: "10px 12px",
                 display: "flex",
                 flexDirection: "column",
-                gap: 4,
-                minHeight: 74,
+                gap: 5,
+                minHeight: 68,
+                cursor: "pointer",
               }}
             >
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 6,
                   color: card.textColor,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 600,
                   lineHeight: 1,
                 }}
               >
-                <span aria-hidden="true" style={{ fontSize: 13 }}>{card.icon}</span>
+                <span aria-hidden="true" style={{ fontSize: 12 }}>{card.icon}</span>
                 <span>{card.label}</span>
               </div>
               <strong
                 style={{
                   color: "#141113",
-                  fontSize: 31,
+                  fontSize: 22,
                   fontWeight: 700,
                   lineHeight: 1,
                   marginLeft: 18,
@@ -1123,12 +1224,13 @@ useEffect(() => {
         ref={containerRef}
         style={{
           position: "fixed",
-          top: isOverviewOpen ? 108 : 0,
+          top: isOverviewOpen ? 154 : 0,
           left: isOverviewOpen ? sidebarWidth + 12 : sidebarWidth,
           right: isOverviewOpen ? 12 : 0,
-          bottom: isOverviewOpen ? "calc(50vh + 8px)" : 0,
-          border: isOverviewOpen ? "1px solid rgba(255,255,255,0.12)" : "none",
+          bottom: isOverviewOpen ? "calc(42vh + 8px)" : 0,
+          border: isOverviewOpen ? "1px solid #F0F0F0" : "none",
           borderRadius: isOverviewOpen ? 18 : 0,
+          background: isOverviewOpen ? "#FFFFFF" : "transparent",
           boxSizing: "border-box",
           overflow: "hidden",
         }}
@@ -1139,7 +1241,7 @@ useEffect(() => {
           style={{
             position: "fixed",
             left: sidebarWidth + 24,
-            bottom: isOverviewOpen ? "calc(50vh + 24px)" : 24,
+            bottom: isOverviewOpen ? "calc(42vh + 24px)" : 24,
             zIndex: 30,
             display: "flex",
             alignItems: "center",
@@ -1159,12 +1261,11 @@ useEffect(() => {
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.16)",
-                background: "rgba(28,27,27,0.72)",
+                border: "1px solid #F0F0F0",
+                background: "#FFFFFF",
                 backdropFilter: "blur(8px)",
-                color: "#f5f5f5",
+                color: "#141113",
                 cursor: "pointer",
-                boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
               }}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
@@ -1192,12 +1293,11 @@ useEffect(() => {
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.16)",
-              background: "rgba(28,27,27,0.72)",
+              border: "1px solid #F0F0F0",
+              background: "#FFFFFF",
               backdropFilter: "blur(8px)",
-              color: "#f5f5f5",
+              color: "#141113",
               cursor: "pointer",
-              boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
             }}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
@@ -1226,13 +1326,12 @@ useEffect(() => {
             position: "fixed",
             left: sidebarWidth,
             right: 0,
-            top: "50vh",
+            top: "58vh",
             bottom: 0,
             zIndex: 18,
             borderRadius: 0,
-            background: "#1F1C1C",
-            border: "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.28)",
+            background: "#FFFFFF",
+            border: "1px solid #F0F0F0",
             backdropFilter: "blur(16px)",
             overflow: "hidden",
             display: "flex",
@@ -1243,7 +1342,7 @@ useEffect(() => {
           <div
             style={{
               padding: "12px 16px",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              borderBottom: "1px solid #F0F0F0",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -1251,16 +1350,16 @@ useEffect(() => {
             }}
           >
             <div>
-              <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2 }}>Tower overview</h2>
+              <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2, color: "#141113" }}>Tower overview</h2>
             </div>
 
             <button
               type="button"
-              onClick={() => navigate("/map", { replace: true })}
+              onClick={() => navigate("/towers", { replace: true })}
               style={{
-                border: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-                color: "#f5f5f5",
+                border: "1px solid #FF0091",
+                background: "#FFFFFF",
+                color: "#FF0091",
                 borderRadius: 999,
                 padding: "8px 12px",
                 cursor: "pointer",
@@ -1268,70 +1367,10 @@ useEffect(() => {
                 fontWeight: 700,
               }}
             >
-              Close overview
+              View all towers
             </button>
           </div>
 
-          <div
-            style={{
-              padding: "10px 16px 0",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <label
-              style={{
-                flex: "1 1 280px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 12px",
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <span style={{ color: "#b0a7a7", fontSize: 13 }}>Search</span>
-              <input
-                type="text"
-                value={overviewSearch}
-                onChange={(event) => setOverviewSearch(event.target.value)}
-                placeholder="Tower ID, location, type, or status"
-                aria-label="Search towers in overview"
-                style={{
-                  width: "100%",
-                  border: "none",
-                  background: "transparent",
-                  color: "#f5f5f5",
-                  outline: "none",
-                  fontSize: 13,
-                }}
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={() => setOverviewSearch("")}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-                color: "#f5f5f5",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              Clear
-            </button>
-
-            <div style={{ color: "#b0a7a7", fontSize: 13 }}>
-              {filteredOverviewRows.length} towers
-            </div>
-          </div>
 
           <div style={{ overflow: "auto", flex: 1 }}>
             <table
@@ -1354,8 +1393,8 @@ useEffect(() => {
                         fontSize: 11,
                         textTransform: "uppercase",
                         letterSpacing: "0.12em",
-                        color: "#b0a7a7",
-                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                        color: "#141113",
+                        borderBottom: "1px solid #F0F0F0",
                       }}
                     >
                       {heading}
@@ -1377,10 +1416,10 @@ useEffect(() => {
                     : { bg: "rgba(148, 163, 184, 0.16)", fg: "#cbd5e1", border: "rgba(148, 163, 184, 0.26)" };
 
                   return (
-                    <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                      <td style={{ padding: "16px 18px", fontSize: 13, fontWeight: 700 }}>{row.model.id}</td>
-                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.location}</td>
-                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9", maxWidth: 180 }}>
+                    <tr key={row.model.id} style={{ borderBottom: "1px solid #F0F0F0" }}>
+                      <td style={{ padding: "16px 18px", fontSize: 13, fontWeight: 700, color: "#141113" }}>{row.model.id}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#141113" }}>{row.location}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#141113", maxWidth: 180 }}>
                         <span
                           title={row.type}
                           style={{
@@ -1418,7 +1457,7 @@ useEffect(() => {
                           <Link
                             to={`/map/${row.model.id}`}
                             style={{
-                              color: "#f5f5f5",
+                              color: "#FF0091",
                               fontSize: 12,
                               fontWeight: 700,
                               textDecoration: "underline",
@@ -1431,7 +1470,7 @@ useEffect(() => {
                             to={`/model-viewer/${row.model.id}`}
                             target="_blank"
                             style={{
-                              color: "#f5f5f5",
+                              color: "#FF0091",
                               fontSize: 12,
                               fontWeight: 700,
                               textDecoration: "underline",
@@ -1448,7 +1487,7 @@ useEffect(() => {
 
                 {filteredOverviewRows.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#9a9a9a" }}>
+                    <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#141113" }}>
                       No towers match your search.
                     </td>
                   </tr>
