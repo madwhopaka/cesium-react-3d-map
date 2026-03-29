@@ -17,6 +17,8 @@ export const MODELS = [
     scale: 2.1,
     blipColor: "#f5f5f5",
     status: "Maintenance due",
+    statusUpdated: "Today",
+    assignedTo: "Ryland Grace",
     uri: "/models/SICA001946.glb",
     towerSpecs: {
       type: "Monopole",
@@ -141,6 +143,8 @@ export const MODELS = [
     scale: 2.2,
     blipColor: "#f5f5f5",
     status: "Offline",
+    statusUpdated: "8 min ago",
+    assignedTo: "Carl Grimes",
     uri: "/models/SITX024649.glb",
     towerSpecs: {
       type: "Monopole",
@@ -284,6 +288,8 @@ export const MODELS = [
     scale: 0.7,
     blipColor: "#f5f5f5",
     status: "Maintenance due",
+    statusUpdated: "15 min ago",
+    assignedTo: "Eva Stratt",
     uri: "/models/204312.glb",
     towerSpecs: {
       type: "Lattice",
@@ -426,6 +432,8 @@ export const MODELS = [
     scale: 0.15,
     blipColor: "#f5f5f5",
     status: "Maintenance due",
+    statusUpdated: "5 hrs ago",
+    assignedTo: "Yao Li-Jie",
     uri: "/models/SICO001139.glb",
     towerSpecs: {
       type: "Monopole",
@@ -626,7 +634,9 @@ export const MODELS = [
     scale: 0.4,
     blipColor: "#f5f5f5",
     uri: "/models/Site A001.glb",
-      status: "Active",
+    status: "Active",
+    statusUpdated: "20 hrs ago",
+    assignedTo: "Martin DuBois",
     towerSpecs: {
       type: "Monopole",
       location: "Near Gifu, Japan",
@@ -805,7 +815,9 @@ export const MODELS = [
     towerHeight: 50,
     scale: 2,
     uri: "/models/78266.glb",
-      status: "Offline",
+    status: "Offline",
+    statusUpdated: "07 Feb '26 10:22 AM",
+    assignedTo: "Ryland Grace",
     towerSpecs: {
       type: "Ground-Based Lattice Tower (3-Legged Hybrid Structure)",
       location: "Saitama, Japan",

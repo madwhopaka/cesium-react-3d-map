@@ -9,6 +9,7 @@ import { MODEL_LOOKUP } from "../constants/models";
 import { normalizeNodeName } from "../helpers/helper";
 import PartBubble from "./Cesium/PartsModal";
 import TowerBubble from "./Cesium/TowerModal";
+import LoadingScreen from "./Cesium/LoadingScreen";
 
 export default function ModelViewer({
   autoRotate = true,
@@ -29,7 +30,9 @@ export default function ModelViewer({
   const pointerRef = useRef(new THREE.Vector2());
   const clockRef = useRef(new THREE.Clock());
   const isInteractingRef = useRef(false);
+  const interactionResetTimerRef = useRef(null);
   const lastInteractionAtRef = useRef(0);
+  const isAutoRotateEnabledRef = useRef(autoRotate);
 
   const model = MODEL_LOOKUP[modelId];
   const [isTowerBubbleVisible, setIsTowerBubbleVisible] = useState(false);
@@ -37,6 +40,11 @@ export default function ModelViewer({
   const [bubbleAnchor, setBubbleAnchor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInIframe, setIsInIframe] = useState(false);
+  const [isAutoRotateEnabled, setIsAutoRotateEnabled] = useState(autoRotate);
+
+  useEffect(() => {
+    isAutoRotateEnabledRef.current = isAutoRotateEnabled;
+  }, [isAutoRotateEnabled]);
 
   // Detect if component is in iframe
   useEffect(() => {
@@ -134,11 +142,27 @@ export default function ModelViewer({
     const markInteractionStart = () => {
       isInteractingRef.current = true;
       lastInteractionAtRef.current = performance.now();
+
+      if (interactionResetTimerRef.current) {
+        window.clearTimeout(interactionResetTimerRef.current);
+      }
+
+      // Some interactions (especially wheel) may not emit a reliable "end" event.
+      // This timeout prevents auto-rotate from getting stuck off.
+      interactionResetTimerRef.current = window.setTimeout(() => {
+        isInteractingRef.current = false;
+        lastInteractionAtRef.current = performance.now();
+      }, 160);
     };
 
     const markInteractionEnd = () => {
       isInteractingRef.current = false;
       lastInteractionAtRef.current = performance.now();
+
+      if (interactionResetTimerRef.current) {
+        window.clearTimeout(interactionResetTimerRef.current);
+        interactionResetTimerRef.current = null;
+      }
     };
 
     controls.addEventListener("start", markInteractionStart);
@@ -146,6 +170,7 @@ export default function ModelViewer({
 
     renderer.domElement.addEventListener("pointerdown", markInteractionStart);
     renderer.domElement.addEventListener("pointerup", markInteractionEnd);
+    renderer.domElement.addEventListener("pointercancel", markInteractionEnd);
     renderer.domElement.addEventListener("touchstart", markInteractionStart, { passive: true });
     renderer.domElement.addEventListener("touchend", markInteractionEnd);
     renderer.domElement.addEventListener("wheel", markInteractionStart, { passive: true });
@@ -187,19 +212,9 @@ export default function ModelViewer({
         node = node.parent;
       }
 
-      setPartBubble({
-        label: fallbackLabel,
-        manufacturer: "",
-        position: "Inside 3D model",
-        purpose: "Selected model component",
-        detailedPurpose: "This mesh is part of the current tower model.",
-        material: "",
-        lifeDuration: "",
-        icon: "◼",
-      });
-      setBubbleAnchor({
-        x: event.clientX,
-        y: event.clientY,
+      console.log("[ModelViewer PartBubble] Unmapped node:", {
+        modelId: model.id,
+        fallbackLabel,
       });
     };
 
@@ -264,7 +279,7 @@ export default function ModelViewer({
       const canResumeRotation = !resumeAfterInactivity || inactivityElapsed >= resumeDelayMs;
 
       if (
-        autoRotate &&
+        isAutoRotateEnabledRef.current &&
         modelRef.current &&
         !isInteractingRef.current &&
         canResumeRotation
@@ -293,11 +308,16 @@ export default function ModelViewer({
       renderer.domElement.removeEventListener("click", handlePartClick);
       renderer.domElement.removeEventListener("pointerdown", markInteractionStart);
       renderer.domElement.removeEventListener("pointerup", markInteractionEnd);
+      renderer.domElement.removeEventListener("pointercancel", markInteractionEnd);
       renderer.domElement.removeEventListener("touchstart", markInteractionStart);
       renderer.domElement.removeEventListener("touchend", markInteractionEnd);
       renderer.domElement.removeEventListener("wheel", markInteractionStart);
       controls.removeEventListener("start", markInteractionStart);
       controls.removeEventListener("end", markInteractionEnd);
+      if (interactionResetTimerRef.current) {
+        window.clearTimeout(interactionResetTimerRef.current);
+        interactionResetTimerRef.current = null;
+      }
       controls.dispose();
       dracoLoader.dispose();
       renderer.dispose();
@@ -325,8 +345,8 @@ export default function ModelViewer({
           to="/" 
           style={{
             padding: '12px 24px',
-            backgroundColor: '#444444',
-            color: '#f5f5f5',
+            backgroundColor: 'white',
+            color: '#FF0091',
             textDecoration: 'none',
             borderRadius: '8px'
           }}
@@ -338,46 +358,8 @@ export default function ModelViewer({
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: VIEWER_BG, color: '#1f1f1f', fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif' }}>
-      {/* Loading Screen */}
-      {isLoading && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(245, 245, 245, 0.96)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          gap: '24px',
-        }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            border: '4px solid #d4d4d4',
-            borderTop: '4px solid #6b6b6b',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }} />
-          <div style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#1f1f1f',
-          }}>
-            Loading 3D Model…
-          </div>
-          <style>
-            {`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}
-          </style>
-        </div>
-      )}
+    <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: VIEWER_BG, color: '#1f1f1f', fontFamily: '"DM Sans", "Segoe UI", system-ui, sans-serif' }}>
+      <LoadingScreen isVisible={isLoading} />
 
       {!isInIframe && (
         <Link
@@ -388,14 +370,14 @@ export default function ModelViewer({
             left: '20px',
             zIndex: 1000,
             padding: '12px 24px',
-            backgroundColor: 'rgba(47, 47, 47, 0.96)',
-            color: '#f5f5f5',
+            backgroundColor: 'white',
+            color: '#FF0091',
             textDecoration: 'none',
             borderRadius: '8px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.24)',
+            // boxShadow: '0 10px 30px rgba(0,0,0,0.24)',
             fontSize: '14px',
             fontWeight: '500',
-            backdropFilter: 'blur(10px)',
+            // backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
@@ -403,23 +385,64 @@ export default function ModelViewer({
         </Link>
       )}
 
-      <div
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isAutoRotateEnabled}
+        onClick={() => setIsAutoRotateEnabled((prev) => !prev)}
         style={{
           position: 'absolute',
-          top: '20px',
           right: '20px',
+          bottom: '20px',
           zIndex: 1000,
-          padding: '8px 12px',
-          backgroundColor: 'rgba(47, 47, 47, 0.96)',
-          color: '#f5f5f5',
-          borderRadius: '6px',
-          boxShadow: '0 10px 22px rgba(0,0,0,0.24)',
+          height: '50px',
+          minWidth: '130px',
+          padding: '0 8px 0 14px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '4px',
+          border: '1px solid #F0F0F0',
+          borderRadius: '999px',
+          backgroundColor: '#FFFFFF',
+          color: '#141113',
+          boxShadow: '0 8px 18px rgba(20, 17, 19, 0.14)',
           backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          fontSize: '13px',
+          fontWeight: '700',
+          cursor: 'pointer',
         }}
       >
-        <h2 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '600' }}>{model.name}</h2>
-      </div>
+        <span style={{fontSize:15}}>{isAutoRotateEnabled ? 'Rotate' : 'Still'}</span>
+        <span
+          aria-hidden="true"
+          style={{
+            width: '48px',
+            height: '26px',
+            borderRadius: '999px',
+            border: '1px solid #E8E8E8',
+            backgroundColor: '#cfcaca',
+            display: 'inline-flex',
+            alignItems: 'center',
+            position: 'relative',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: '1px',
+              left: isAutoRotateEnabled ? '23px' : '1px',
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              border: '1px solid #0F0B14',
+              backgroundColor: '#0F0B14',
+              transition: 'left 180ms ease',
+            }}
+          />
+        </span>
+      </button>
 
       <div ref={containerRef} style={{ 
         position: 'absolute',

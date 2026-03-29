@@ -8,10 +8,11 @@ export default function PartBubble({ bubble, anchor, onClose }) {
     left,
     top,
     tailHorizontal,
-    tailVertical,
+    tailTop,
   } = computeBubblePosition({
     anchorX: anchor?.x,
     anchorY: anchor?.y,
+    bounds: anchor?.bounds,
   });
 
   useEffect(() => {
@@ -64,15 +65,14 @@ export default function PartBubble({ bubble, anchor, onClose }) {
           animation: "bubbleIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
           display: "flex",
           flexDirection: "column",
-          fontFamily: 'Inter, "Segoe UI", system-ui, sans-serif',
+          fontFamily: '"DM Sans", "Segoe UI", system-ui, sans-serif',
         }}
       >
         {/* Tail */}
         <div
           style={{
             position: "absolute",
-            top: tailVertical === "top" ? 22 : "auto",
-            bottom: tailVertical === "bottom" ? 22 : "auto",
+            top: tailTop,
             [tailHorizontal === "left" ? "left" : "right"]: -12,
             width: 0,
             height: 0,

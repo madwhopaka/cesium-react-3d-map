@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Bell, ExternalLink, MoveLeft, Search } from "lucide-react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -11,8 +12,6 @@ import {
   CESIUM_CONFIG,
   MODEL_CONFIG,
   BLIP_CONFIG,
-  getStatusColorForStatus,
-  getStatusVariant,
   getBlipImageForStatus,
   getVisibilityThreshold,
 } from "../constants/config";
@@ -185,6 +184,53 @@ export default function CesiumMap({
         .includes(query);
     });
   }, [overviewRows, overviewSearch]);
+
+  const overviewSummaryCards = useMemo(() => {
+    const maintenanceCount = overviewRows.filter((row) =>
+      String(row.status).toLowerCase().includes("maintenance")
+    ).length;
+    const offlineCount = overviewRows.filter((row) =>
+      String(row.status).toLowerCase().includes("offline")
+    ).length;
+    const activeCount = overviewRows.filter((row) =>
+      String(row.status).toLowerCase().includes("active")
+    ).length;
+
+    return [
+      {
+        id: "maintenance",
+        label: "Maintenance due",
+        count: maintenanceCount,
+        textColor: "#C50B2F",
+        bgColor: "#C50B2F14",
+        icon: "🛡",
+      },
+      {
+        id: "offline",
+        label: "Offline towers",
+        count: offlineCount,
+        textColor: "#B25A20",
+        bgColor: "#B25A2014",
+        icon: "🔧",
+      },
+      {
+        id: "active",
+        label: "Active towers",
+        count: activeCount,
+        textColor: "#136B36",
+        bgColor: "#136B3614",
+        icon: "⚡",
+      },
+      {
+        id: "all",
+        label: "All towers",
+        count: overviewRows.length,
+        textColor: "#141113",
+        bgColor: "#14111310",
+        icon: "⟲",
+      },
+    ];
+  }, [overviewRows]);
 
   /* ---------------- INIT ---------------- */
   useEffect(() => {
@@ -554,18 +600,51 @@ export default function CesiumMap({
           const modelId = picked.id.modelId;
           const model = MODEL_LOOKUP[modelId];
           if (model) {
-            const raw = picked.detail.node._name;
+            const raw =
+              picked.detail.node?._name ||
+              picked.detail.node?.name ||
+              picked.detail.node?.id ||
+              "unknown-node";
             const key = normalizeNodeName(raw);
             const part = model.parts?.[key] || model.parts?.[raw];
             if (part) {
+              const canvas = viewer.scene.canvas;
+              const canvasRect = canvas.getBoundingClientRect();
+
+              // Cesium click coords can vary between CSS pixels and drawing buffer pixels.
+              // Normalize to CSS pixels, then convert to viewport coordinates.
+              const dprScaleX = canvas.clientWidth > 0 ? canvas.clientWidth / (canvas.width || canvas.clientWidth) : 1;
+              const dprScaleY = canvas.clientHeight > 0 ? canvas.clientHeight / (canvas.height || canvas.clientHeight) : 1;
+
+              const clickXInCanvas =
+                canvas.width > canvas.clientWidth + 1 && movement.position.x > canvas.clientWidth + 1
+                  ? movement.position.x * dprScaleX
+                  : movement.position.x;
+              const clickYInCanvas =
+                canvas.height > canvas.clientHeight + 1 && movement.position.y > canvas.clientHeight + 1
+                  ? movement.position.y * dprScaleY
+                  : movement.position.y;
+
               setPartBubble(part);
             
               setBubbleAnchor({
-                x: movement.position.x,
-                y: movement.position.y,
+                x: canvasRect.left + clickXInCanvas,
+                y: canvasRect.top + clickYInCanvas,
+                bounds: {
+                  left: canvasRect.left,
+                  top: canvasRect.top,
+                  right: canvasRect.right,
+                  bottom: canvasRect.bottom,
+                },
               });
               return;
             }
+
+            console.log("[Map PartBubble] Unmapped node:", {
+              modelId,
+              rawNodeName: raw,
+              normalizedKey: key,
+            });
           }
         }
 
@@ -789,6 +868,31 @@ useEffect(() => {
     viewer.scene.requestRender();
   };
 
+  const zoomInManually = () => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    const currentHeight = viewer.camera.positionCartographic?.height || 1000;
+    const step = Math.max(25, currentHeight * 0.2);
+    viewer.camera.zoomIn(step);
+    viewer.scene.requestRender();
+  };
+
+  const zoomOutManually = () => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    const currentHeight = viewer.camera.positionCartographic?.height || 1000;
+    const step = Math.max(25, currentHeight * 0.2);
+    viewer.camera.zoomOut(step);
+    viewer.scene.requestRender();
+  };
+
+  const openActiveModelInNewScreen = () => {
+    if (!activeModelRef.current?.id) return;
+    window.open(`/model-viewer/${activeModelRef.current.id}`, "_blank", "noopener,noreferrer");
+  };
+
   const openOverviewPanel = () => {
     navigate("/", { replace: true });
     setPanelOpen(true);
@@ -869,13 +973,20 @@ useEffect(() => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const hoverStatusVariant = hoverBlipCard
-    ? getStatusVariant(hoverBlipCard.model.status)
-    : "green";
-  const hoverStatusBackground = hoverBlipCard
-    ? getStatusColorForStatus(hoverBlipCard.model.status)
-    : "#22c55e";
-  const hoverStatusTextColor = hoverStatusVariant === "yellow" ? "#1f1f1f" : "#ffffff";
+  const hoverStatusTone = useMemo(() => {
+    const status = String(hoverBlipCard?.model?.status || "").toLowerCase();
+
+    if (status.includes("maintenance")) {
+      return { bg: "#C50B2F14", fg: "#C50B2F" };
+    }
+    if (status.includes("offline")) {
+      return { bg: "#B25A2014", fg: "#B25A20" };
+    }
+    if (status.includes("active")) {
+      return { bg: "#136B3614", fg: "#136B36" };
+    }
+    return { bg: "#14111310", fg: "#141113" };
+  }, [hoverBlipCard]);
 
 
   return (
@@ -908,8 +1019,8 @@ useEffect(() => {
             <div
               style={{
                 padding: "6px 10px",
-                background: hoverStatusBackground,
-                color: hoverStatusTextColor,
+                background: hoverStatusTone.bg,
+                color: hoverStatusTone.fg,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -925,12 +1036,9 @@ useEffect(() => {
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: hoverStatusTextColor,
+                  color: hoverStatusTone.fg,
                   fontSize: 11,
-                  background:
-                    hoverStatusVariant === "yellow"
-                      ? "rgba(0,0,0,0.18)"
-                      : "rgba(255,255,255,0.24)",
+                  background: "rgba(255,255,255,0.78)",
                 }}
               >
                 i
@@ -1013,16 +1121,221 @@ useEffect(() => {
         onSetRenderProfile={setRenderProfile}
       />
 
+      {isOverviewOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: sidebarWidth,
+            right: 0,
+            bottom: 0,
+            background: "#FFFFFF",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {isOverviewOpen && (
+        <section
+          style={{
+            position: "fixed",
+            top: 0,
+            left: sidebarWidth,
+            right: 0,
+            zIndex: 24,
+            background: "#FFFFFF",
+            padding: "14px 18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 14,
+          }}
+        >
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            {panelOpen && (
+              <button
+                type="button"
+                onClick={() => setPanelOpen(false)}
+                aria-label="Close sidebar"
+                title="Close sidebar"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  display: "inline-flex",
+                  marginRight: 15,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#121212",
+                }}
+              >
+                <MoveLeft color="currentColor" />
+              </button>
+            )}
+            <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: "#141113", lineHeight: 1.1 }}>Overview</h1>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "0 1 520px" }}>
+            <label
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "#F7F7F7",
+                border: "1px solid #F0F0F0",
+                borderRadius: 999,
+                padding: "9px 12px",
+              }}
+            >
+              <Search color="#000000" />
+              <input
+                type="text"
+                value={overviewSearch}
+                onChange={(event) => setOverviewSearch(event.target.value)}
+                placeholder="Search something"
+                aria-label="Search towers in overview"
+                style={{
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  color: "#141113",
+                  outline: "none",
+                  fontSize: 13,
+                }}
+              />
+            </label>
+
+            <span
+              style={{
+                position: "relative",
+                width: 36,
+                height: 36,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#141113",
+              }}
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <Bell size={20} strokeWidth={1.9} aria-hidden="true" />
+              <span
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  right: 1,
+                  width: 9,
+                  height: 9,
+                  borderRadius: 999,
+                  background: "#FF003D",
+                  border: "1px solid #FFFFFF",
+                }}
+              />
+            </span>
+            <span style={{ width: 30, height: 30, borderRadius: 999, background: "#136B36", color: "#FFFFFF", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>T</span>
+          </div>
+        </section>
+      )}
+
+      {isMapRoute && panelOpen && (
+        <button
+          type="button"
+          onClick={() => setPanelOpen(false)}
+          aria-label="Close sidebar"
+          title="Close sidebar"
+          style={{
+            position: "fixed",
+            top: 16,
+            left: sidebarWidth + 16,
+            zIndex: 31,
+            border: "none",
+            background: "transparent",
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#121212",
+          }}
+        >
+          <MoveLeft color="white" /> <span style={{color: "white", marginLeft:10}}>Close</span>
+        </button>
+      )}
+
+      {isOverviewOpen && (
+        <section
+          style={{
+            position: "fixed",
+            top: 74,
+            left: sidebarWidth + 16,
+            right: 16,
+            zIndex: 22,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 10,
+            pointerEvents: "auto",
+          }}
+        >
+          {overviewSummaryCards.map((card) => (
+            <article
+              key={card.id}
+              onClick={() => navigate(`/towers?filter=${card.id}`)}
+              style={{
+                background: card.bgColor,
+                borderRadius: 4,
+                border: "1px solid #F0F0F0",
+                borderLeft: `3px solid ${card.textColor}`,
+                padding: "10px 12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 5,
+                minHeight: 68,
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  color: card.textColor,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  lineHeight: 1,
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 12 }}>{card.icon}</span>
+                <span>{card.label}</span>
+              </div>
+              <strong
+                style={{
+                  color: "#141113",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  marginLeft: 18,
+                }}
+              >
+                {card.count}
+              </strong>
+            </article>
+          ))}
+        </section>
+      )}
+
       <div
         ref={containerRef}
         style={{
           position: "fixed",
-          top: isOverviewOpen ? 12 : 0,
+          top: isOverviewOpen ? 154 : 0,
           left: isOverviewOpen ? sidebarWidth + 12 : sidebarWidth,
           right: isOverviewOpen ? 12 : 0,
-          bottom: isOverviewOpen ? "calc(50vh + 8px)" : 0,
-          border: isOverviewOpen ? "1px solid rgba(255,255,255,0.12)" : "none",
+          bottom: isOverviewOpen ? "calc(42vh + 8px)" : 0,
+          border: isOverviewOpen ? "1px solid #F0F0F0" : "none",
           borderRadius: isOverviewOpen ? 18 : 0,
+          background: isOverviewOpen ? "#FFFFFF" : "transparent",
           boxSizing: "border-box",
           overflow: "hidden",
         }}
@@ -1032,14 +1345,167 @@ useEffect(() => {
         <div
           style={{
             position: "fixed",
-            left: sidebarWidth + 24,
-            bottom: isOverviewOpen ? "calc(50vh + 24px)" : 24,
+            right: 24,
+            bottom: isOverviewOpen ? "calc(42vh + 24px)" : 24,
             zIndex: 30,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-end",
             gap: 10,
           }}
         >
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "5px 7px",
+                borderRadius: 999,
+                border: "1px solid #F0F0F0",
+                background: "#FFFFFF",
+              }}
+            >
+              <button
+                type="button"
+                onClick={zoomOutManually}
+                title="Zoom out"
+                aria-label="Zoom out"
+                style={{
+                  width: 30,
+                  height: 30,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#141113",
+                  color: "#FFFFFF",
+                  cursor: "pointer",
+                  fontSize: 24,
+                  fontWeight: 500,
+                  lineHeight: 0.7,
+                  paddingBottom: 2,
+                }}
+              >
+                -
+              </button>
+
+              <button
+                type="button"
+                onClick={zoomInManually}
+                title="Zoom in"
+                aria-label="Zoom in"
+                style={{
+                  width: 30,
+                  height: 30,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  border: "none",
+                  background: "#141113",
+                  color: "#FFFFFF",
+                  cursor: "pointer",
+                  fontSize: 24,
+                  fontWeight: 500,
+                  lineHeight: 0.7,
+                  paddingBottom: 1,
+                }}
+              >
+                +
+              </button>
+            </div>
+
+            {Boolean(towerBubble) && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!activeModelRef.current?.id) return;
+                    setShowMiniViewer((value) => !value);
+                  }}
+                  aria-pressed={showMiniViewer}
+                  title={showMiniViewer ? "Turn off in-window 3D" : "Turn on in-window 3D"}
+                  style={{
+                    height: 44,
+                    minWidth: 132,
+                    padding: "0 6px 0 12px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    borderRadius: 999,
+                    outline: "none",
+                    border: "1px solid #F0F0F0",
+                    background: "#FFFFFF",
+                    position: "relative",
+                    cursor: activeModelRef.current?.id ? "pointer" : "not-allowed",
+                    opacity: activeModelRef.current?.id ? 1 : 0.45,
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#141113", whiteSpace: "nowrap" }}>
+                    View GLB
+                  </span>
+
+                  <span
+                    style={{
+                      width: 44,
+                      height: 24,
+                      borderRadius: 999,
+                      border: "1px solid #E8E8E8",
+                      background: "#cfcaca",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      position: "relative",
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 1,
+                        left: showMiniViewer ? 21 : 1,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 999,
+                        border: "1px solid white",
+                        background: "#0F0B14",
+                        transition: "left 160ms ease",
+                      }}
+                    />
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={openActiveModelInNewScreen}
+                  title="Open 3D model in new screen"
+                  aria-label="Open 3D model in new screen"
+                  style={{
+                    height: 44,
+                    width: 44,
+                    borderRadius: 999,
+                    border: "1px solid #F0F0F0",
+                    color: "#141113",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#FFFFFF",
+                    cursor: activeModelRef.current?.id ? "pointer" : "not-allowed",
+                    opacity: activeModelRef.current?.id ? 1 : 0.45,
+                  }}
+                >
+                  <ExternalLink size={17} />
+                </button>
+              </div>
+            )}
+          </div>
+
           {isOverviewOpen && (
             <button
               type="button"
@@ -1053,12 +1519,11 @@ useEffect(() => {
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 12,
-                border: "1px solid rgba(255,255,255,0.16)",
-                background: "rgba(28,27,27,0.72)",
+                border: "1px solid #F0F0F0",
+                background: "#FFFFFF",
                 backdropFilter: "blur(8px)",
-                color: "#f5f5f5",
+                color: "#141113",
                 cursor: "pointer",
-                boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
               }}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
@@ -1086,12 +1551,11 @@ useEffect(() => {
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.16)",
-              background: "rgba(28,27,27,0.72)",
+              border: "1px solid #F0F0F0",
+              background: "#FFFFFF",
               backdropFilter: "blur(8px)",
-              color: "#f5f5f5",
+              color: "#141113",
               cursor: "pointer",
-              boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
             }}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
@@ -1111,7 +1575,8 @@ useEffect(() => {
       <TowerBubble
         tower={towerBubble}
         visible={Boolean(towerBubble)}
-        onOpenInWindow={() => setShowMiniViewer(true)}
+        isInWindowOpen={showMiniViewer}
+        onToggleInWindow={(nextState) => setShowMiniViewer(Boolean(nextState))}
       />
 
       {isOverviewOpen && (
@@ -1120,13 +1585,12 @@ useEffect(() => {
             position: "fixed",
             left: sidebarWidth,
             right: 0,
-            top: "50vh",
+            top: "58vh",
             bottom: 0,
             zIndex: 18,
             borderRadius: 0,
-            background: "#1F1C1C",
-            border: "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.28)",
+            background: "#FFFFFF",
+            border: "1px solid #F0F0F0",
             backdropFilter: "blur(16px)",
             overflow: "hidden",
             display: "flex",
@@ -1137,7 +1601,7 @@ useEffect(() => {
           <div
             style={{
               padding: "12px 16px",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              borderBottom: "1px solid #F0F0F0",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -1145,16 +1609,16 @@ useEffect(() => {
             }}
           >
             <div>
-              <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2 }}>Tower overview</h2>
+              <h2 style={{ margin: 0, fontSize: 17, lineHeight: 1.2, color: "#141113" }}>Tower overview</h2>
             </div>
 
             <button
               type="button"
-              onClick={() => navigate("/map", { replace: true })}
+              onClick={() => navigate("/towers", { replace: true })}
               style={{
-                border: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-                color: "#f5f5f5",
+                border: "1px solid #FF0091",
+                background: "#FFFFFF",
+                color: "#FF0091",
                 borderRadius: 999,
                 padding: "8px 12px",
                 cursor: "pointer",
@@ -1162,70 +1626,10 @@ useEffect(() => {
                 fontWeight: 700,
               }}
             >
-              Close overview
+              View all towers
             </button>
           </div>
 
-          <div
-            style={{
-              padding: "10px 16px 0",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <label
-              style={{
-                flex: "1 1 280px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 12px",
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.06)",
-              }}
-            >
-              <span style={{ color: "#b0a7a7", fontSize: 13 }}>Search</span>
-              <input
-                type="text"
-                value={overviewSearch}
-                onChange={(event) => setOverviewSearch(event.target.value)}
-                placeholder="Tower ID, location, type, or status"
-                aria-label="Search towers in overview"
-                style={{
-                  width: "100%",
-                  border: "none",
-                  background: "transparent",
-                  color: "#f5f5f5",
-                  outline: "none",
-                  fontSize: 13,
-                }}
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={() => setOverviewSearch("")}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.06)",
-                background: "rgba(255,255,255,0.03)",
-                color: "#f5f5f5",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              Clear
-            </button>
-
-            <div style={{ color: "#b0a7a7", fontSize: 13 }}>
-              {filteredOverviewRows.length} towers
-            </div>
-          </div>
 
           <div style={{ overflow: "auto", flex: 1 }}>
             <table
@@ -1248,8 +1652,8 @@ useEffect(() => {
                         fontSize: 11,
                         textTransform: "uppercase",
                         letterSpacing: "0.12em",
-                        color: "#b0a7a7",
-                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                        color: "#141113",
+                        borderBottom: "1px solid #F0F0F0",
                       }}
                     >
                       {heading}
@@ -1271,10 +1675,10 @@ useEffect(() => {
                     : { bg: "rgba(148, 163, 184, 0.16)", fg: "#cbd5e1", border: "rgba(148, 163, 184, 0.26)" };
 
                   return (
-                    <tr key={row.model.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                      <td style={{ padding: "16px 18px", fontSize: 13, fontWeight: 700 }}>{row.model.id}</td>
-                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9" }}>{row.location}</td>
-                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#d9d9d9", maxWidth: 180 }}>
+                    <tr key={row.model.id} style={{ borderBottom: "1px solid #F0F0F0" }}>
+                      <td style={{ padding: "16px 18px", fontSize: 13, fontWeight: 700, color: "#141113" }}>{row.model.id}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#141113" }}>{row.location}</td>
+                      <td style={{ padding: "16px 18px", fontSize: 13, color: "#141113", maxWidth: 180 }}>
                         <span
                           title={row.type}
                           style={{
@@ -1312,7 +1716,7 @@ useEffect(() => {
                           <Link
                             to={`/map/${row.model.id}`}
                             style={{
-                              color: "#f5f5f5",
+                              color: "#FF0091",
                               fontSize: 12,
                               fontWeight: 700,
                               textDecoration: "underline",
@@ -1325,7 +1729,7 @@ useEffect(() => {
                             to={`/model-viewer/${row.model.id}`}
                             target="_blank"
                             style={{
-                              color: "#f5f5f5",
+                              color: "#FF0091",
                               fontSize: 12,
                               fontWeight: 700,
                               textDecoration: "underline",
@@ -1342,7 +1746,7 @@ useEffect(() => {
 
                 {filteredOverviewRows.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#9a9a9a" }}>
+                    <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#141113" }}>
                       No towers match your search.
                     </td>
                   </tr>
@@ -1359,76 +1763,106 @@ useEffect(() => {
           style={{
             position: 'fixed',
             inset: 0,
-            // backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            background: 'rgba(20, 17, 19, 0.28)',
             zIndex: 10000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backdropFilter: 'blur(4px)',
+            backdropFilter: 'blur(8px)',
           }}
           onClick={() => setShowMiniViewer(false)}
         >
           <div
             style={{
               position: 'relative',
-              width: '60vw',
-              height: '90vh',
-              maxWidth: '1400px',
-              maxHeight: '900px',
-              borderRadius: '20px',
+              width: '82vw',
+              height: '92vh',
+              maxWidth: '1800px',
+              maxHeight: '1080px',
+              borderRadius: '24px',
               overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              border: '1px solid #F0F0F0',
+              boxShadow: '0 26px 70px rgba(20,17,19,0.24)',
+              background: '#FFFFFF',
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '56px',
+                background: 'rgba(255,255,255,0.94)',
+                borderBottom: '1px solid #F0F0F0',
+                zIndex: 10001,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 18px',
+              }}
+            >
+              <div style={{ color: '#141113', fontSize: '14px', fontWeight: 700 }}>
+                {activeModelRef.current.name || `Tower ${activeModelRef.current.id}`}
+              </div>
+            </div>
+
             {/* Close Button */}
             <button
               onClick={() => setShowMiniViewer(false)}
               style={{
                 position: 'absolute',
-                top: '20px',
-                right: '20px',
-                width: '50px',
-                height: '50px',
+                top: '10px',
+                right: '12px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.95)',
-                border: 'none',
+                background: '#FFFFFF',
+                border: '1px solid #F0F0F0',
                 cursor: 'pointer',
                 zIndex: 10001,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '24px',
+                fontSize: '18px',
                 fontWeight: 'bold',
-                color: '#333',
-                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.3s ease',
+                color: '#141113',
+                transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.target.style.background = 'rgba(255, 60, 60, 0.95)';
-                e.target.style.color = 'white';
-                e.target.style.transform = 'rotate(90deg) scale(1.1)';
+                e.target.style.background = '#FF0091';
+                e.target.style.color = '#FFFFFF';
               }}
               onMouseLeave={(e) => {
-                e.target.style.background = 'rgba(255, 255, 255, 0.95)';
-                e.target.style.color = '#333';
-                e.target.style.transform = 'rotate(0deg) scale(1)';
+                e.target.style.background = '#FFFFFF';
+                e.target.style.color = '#141113';
               }}
             >
               ✕
             </button>
 
             {/* GLB Viewer iframe */}
-            <iframe
-              src={`/model-viewer/${activeModelRef.current.id}`}
+            <div
               style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                borderRadius: '20px',
+                position: 'absolute',
+                top: '56px',
+                left: 0,
+                right: 0,
+                bottom: 0,
               }}
-              title="3D Model Viewer"
-            />
+            >
+              <iframe
+                src={`/model-viewer/${activeModelRef.current.id}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  borderRadius: '0 0 24px 24px',
+                }}
+                title="3D Model Viewer"
+              />
+            </div>
           </div>
         </div>
       )}

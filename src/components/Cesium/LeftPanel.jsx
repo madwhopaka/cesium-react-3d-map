@@ -21,7 +21,7 @@ export default function ModelsPanel({
   }, [location.pathname, location.search]);
 
   const navItems = [
-    { label: "Overview", kind: "action", onClick: onOverview, icon: Home, active: () => location.pathname === "/" || location.pathname === "/towers" },
+    { label: "Overview", kind: "action", onClick: onOverview, icon: Home, active: () => location.pathname === "/" },
     { label: "Maps", kind: "link", to: "/map", icon: Map, active: () => location.pathname === "/map" || location.pathname.startsWith("/map/") },
     { label: "Tower Details", kind: "link", to: "/towers", icon: RadioTower, active: () => location.pathname === "/towers" || location.pathname === "/tower" },
     { label: "Maintenance Activity", kind: "disabled", icon: TriangleAlert },
@@ -39,10 +39,10 @@ export default function ModelsPanel({
       padding: isCollapsed ? 0 : "12px 14px",
       borderRadius: isCollapsed ? 14 : 16,
       textDecoration: "none",
-      color: isActive ? "#ffffff" : "#b0a7a7",
-      background: isActive ? "#2a2424" : "transparent",
-      border: isActive ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
-      boxShadow: isActive ? "0 10px 22px rgba(0,0,0,0.2)" : "none",
+      color: isActive ? "#FF0091" : "#757575",
+      background: "transparent",
+      border: "1px solid transparent",
+      boxShadow: "none",
       transition: "transform 180ms ease, background 180ms ease, opacity 180ms ease",
       cursor: item.kind === "disabled" ? "not-allowed" : "pointer",
       width: isCollapsed ? 40 : "100%",
@@ -119,10 +119,8 @@ export default function ModelsPanel({
         bottom: 0,
         zIndex: 20,
         width: isOpen ? 248 : 68,
-        background: "#1c1b1b",
+        background: "#F7F7F7",
         color: "#f5f5f5",
-        borderRight: "1px solid rgba(255, 255, 255, 0.06)",
-        boxShadow: "18px 0 60px rgba(0, 0, 0, 0.28)",
         backdropFilter: "blur(16px)",
         overflow: "hidden",
         transition:
@@ -135,7 +133,6 @@ export default function ModelsPanel({
       <div
         style={{
           padding: isOpen ? "18px 18px 16px" : "18px 12px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
           display: "flex",
           alignItems: "center",
           justifyContent: isOpen ? "space-between" : "center",
@@ -145,25 +142,13 @@ export default function ModelsPanel({
         {isOpen ? (
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
             <img
-              src="/images/PointAI.png"
+              src="/images/point-ai-open.png"
               alt="PointAI"
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                objectFit: "cover",
+                width:'70%', 
                 flexShrink: 0,
-                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
               }}
             />
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.2, lineHeight: 1.2, color: "#f5f5f5" }}>
-                Quick Menu
-              </div>
-              <div style={{ fontSize: 12, color: "#b0a7a7", marginTop: 4 }}>
-                Search and jump between towers
-              </div>
-            </div>
           </div>
         ) : (
           <button
@@ -184,14 +169,13 @@ export default function ModelsPanel({
             }}
           >
             <img
-              src="/images/PointAI.png"
+              src="/images/point-ai-closed.PNG"
               alt="PointAI"
               style={{
                 width: 40,
                 height: 40,
                 borderRadius: 14,
                 objectFit: "cover",
-                boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
               }}
             />
           </button>
@@ -241,14 +225,14 @@ export default function ModelsPanel({
               marginTop: 4,
               padding: 14,
               borderRadius: 18,
-              background: "#241f1f",
-              border: "1px solid rgba(255,255,255,0.05)",
+              background: "#FFFFFF",
+              border: "1px solid #E6E6E6",
             }}
           >
-            <div style={{ color: "#b0a7a7", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+            <div style={{ color: "#757575", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em" }}>
               Render Profile
             </div>
-            <div style={{ marginTop: 8, color: "#b0a7a7", fontSize: 12, lineHeight: 1.45 }}>
+            <div style={{ marginTop: 8, color: "#757575", fontSize: 12, lineHeight: 1.45 }}>
               Choose quality based on device performance.
             </div>
 
@@ -260,8 +244,8 @@ export default function ModelsPanel({
                 gap:2,
                 padding: 3,
                 borderRadius: 12,
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "#FFFFFF",
+                border: "1px solid #E6E6E6",
               }}
             >
               {[
@@ -278,9 +262,9 @@ export default function ModelsPanel({
                     style={{
                       width: "100%",
                       boxSizing: "border-box",
-                      border: isActive ? "1px solid rgba(255,255,255,0.24)" : "1px solid transparent",
-                      background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
-                      color: isActive ? "#ffffff" : "#c4bbbb",
+                      border: isActive ? "1px solid #FF0091" : "1px solid transparent",
+                      background: "transparent",
+                      color: isActive ? "#FF0091" : "#757575",
                       borderRadius: 9,
                       padding: "10px 4px",
                       cursor: "pointer",
@@ -303,9 +287,9 @@ export default function ModelsPanel({
               style={{
                 marginTop: 8,
                 width: "100%",
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "transparent",
-                color: "#b0a7a7",
+                border: "1px solid #FF0091",
+                background: "#FFFFFF",
+                color: "#FF0091",
                 borderRadius: 10,
                 padding: "8px 10px",
                 cursor: "pointer",
