@@ -248,6 +248,7 @@ export default function CesiumMap({
   /* ---------------- INIT ---------------- */
   useEffect(() => {
     let viewer;
+    let isUnmounted = false;
 
     setIsLoading3D(true);
     initStartTimeRef.current = Date.now(); // Record start time
@@ -293,6 +294,9 @@ export default function CesiumMap({
       const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(
         CESIUM_CONFIG.TILESET_ASSET_ID
       );
+      if (isUnmounted || !viewer || viewer.isDestroyed()) {
+        return;
+      }
       viewer.scene.primitives.add(tileset);
       tilesetRef.current = tileset;
       applyRenderPreset(viewer, tileset, renderProfile);
@@ -572,8 +576,44 @@ export default function CesiumMap({
         setHoverBlipCard(null);
       };
 
+      const canPickScene = () => {
+        if (!viewer || viewer.isDestroyed()) return false;
+        const canvas = viewer.scene?.canvas;
+        if (!canvas) return false;
+        return canvas.clientWidth > 0 && canvas.clientHeight > 0;
+      };
+
+      const safeScenePick = (position) => {
+        if (!position || !canPickScene()) return null;
+        try {
+          return viewer.scene.pick(position);
+        } catch (error) {
+          if (error instanceof RangeError) {
+            console.warn("[Cesium pick] Ignored transient pick RangeError", error);
+            return null;
+          }
+          throw error;
+        }
+      };
+
+      const safePickPosition = (position) => {
+        if (!position || !canPickScene()) return null;
+        try {
+          if (viewer.scene.pickPositionSupported) {
+            return viewer.scene.pickPosition(position);
+          }
+          return null;
+        } catch (error) {
+          if (error instanceof RangeError) {
+            console.warn("[Cesium pickPosition] Ignored transient pick RangeError", error);
+            return null;
+          }
+          throw error;
+        }
+      };
+
       const onMouseMove = (movement) => {
-        const picked = viewer.scene.pick(movement.endPosition);
+        const picked = safeScenePick(movement.endPosition);
         const modelId = picked?.id?.modelId;
 
         if (!modelId) {
@@ -646,9 +686,8 @@ export default function CesiumMap({
       }
 
       // --- Click Handler (parts + coords) ---
-      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-      handler.setInputAction((movement) => {
-        const picked = viewer.scene.pick(movement.position);
+      viewer.screenSpaceEventHandler.setInputAction((movement) => {
+        const picked = safeScenePick(movement.position);
 
         console.log('picked',picked); 
         setPartBubble(null);
@@ -713,9 +752,7 @@ export default function CesiumMap({
         let cartesian;
 
         // Try picking position from 3D tiles / terrain
-        if (scene.pickPositionSupported) {
-          cartesian = scene.pickPosition(movement.position);
-        }
+        cartesian = safePickPosition(movement.position);
 
         // Fallback to globe intersection
         if (!Cesium.defined(cartesian)) {
@@ -742,13 +779,26 @@ export default function CesiumMap({
     };
     init();
     return () => {
+      isUnmounted = true;
       if (!viewer || viewer.isDestroyed()) return;
+
+      viewer.screenSpaceEventHandler.removeInputAction(
+        Cesium.ScreenSpaceEventType.MOUSE_MOVE
+      );
+      viewer.screenSpaceEventHandler.removeInputAction(
+        Cesium.ScreenSpaceEventType.LEFT_CLICK
+      );
+
+      if (viewer.cameraChangeListener) {
+        viewer.camera.changed.removeEventListener(viewer.cameraChangeListener);
+      }
 
       if (viewer.cameraLogMoveEndListener) {
         viewer.camera.moveEnd.removeEventListener(viewer.cameraLogMoveEndListener);
       }
 
       viewer.destroy();
+      viewerRef.current = null;
     };
   }, []);
 
