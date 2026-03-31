@@ -275,6 +275,7 @@ export default function CesiumMap({
 
       viewer.scene.requestRenderMode = true;
       viewer.scene.maximumRenderTimeChange = Infinity;
+      viewer.targetFrameRate = 30;
 
       viewerRef.current = viewer;
 
@@ -486,6 +487,30 @@ export default function CesiumMap({
       viewer.cameraLogMoveEndListener = logCurrentCameraView;
       viewer.camera.moveEnd.addEventListener(logCurrentCameraView);
       logCurrentCameraView();
+
+      const recoverFromRenderRangeError = (_scene, error) => {
+        if (!viewer || viewer.isDestroyed()) return;
+        const isRangeError = error instanceof RangeError;
+        const message = String(error?.message || "");
+        const isInvalidArrayLength = message.toLowerCase().includes("invalid array length");
+        if (!isRangeError || !isInvalidArrayLength) return;
+
+        console.warn("[Cesium render] Recovering from transient Invalid array length", error);
+
+        viewer.useDefaultRenderLoop = false;
+
+        window.setTimeout(() => {
+          if (!viewer || viewer.isDestroyed()) return;
+
+          const safeScale = Math.max(0.6, Math.min(1, Number(viewer.resolutionScale) || 0.9));
+          viewer.resolutionScale = safeScale;
+          viewer.useDefaultRenderLoop = true;
+          viewer.scene.requestRender();
+        }, 120);
+      };
+
+      viewer.scene.renderError.addEventListener(recoverFromRenderRangeError);
+      viewer.renderErrorRecoveryListener = recoverFromRenderRangeError;
 
 
       setEntitiesReady(true);
@@ -797,10 +822,40 @@ export default function CesiumMap({
         viewer.camera.moveEnd.removeEventListener(viewer.cameraLogMoveEndListener);
       }
 
+      if (viewer.renderErrorRecoveryListener) {
+        viewer.scene.renderError.removeEventListener(viewer.renderErrorRecoveryListener);
+      }
+
       viewer.destroy();
       viewerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    const syncRenderLoopState = () => {
+      if (!viewer || viewer.isDestroyed()) return;
+
+      const shouldPause = showMiniViewer || document.hidden;
+      viewer.useDefaultRenderLoop = !shouldPause;
+
+      if (!shouldPause) {
+        viewer.scene.requestRender();
+      }
+    };
+
+    syncRenderLoopState();
+    document.addEventListener("visibilitychange", syncRenderLoopState);
+
+    return () => {
+      document.removeEventListener("visibilitychange", syncRenderLoopState);
+      if (!viewer || viewer.isDestroyed()) return;
+      viewer.useDefaultRenderLoop = true;
+      viewer.scene.requestRender();
+    };
+  }, [showMiniViewer]);
 
   /* ---------------- LOADER ORCHESTRATION ---------------- */
   useEffect(() => {
