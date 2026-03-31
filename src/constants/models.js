@@ -452,7 +452,7 @@ export const MODELS = [
         "This monopole tower provides efficient space utilization and moderate load capacity, suitable for urban or semi-urban deployments. Presence of multiple RF and power distribution units indicates a compact, integrated telecom site supporting broadband and cellular services. Overall maintenance condition is stable with no immediate structural or operational concerns.",
     },
     parts: {
-      part_01: {
+      "celluler_antenna": {
         label: "Cellular Antenna",
         manufacturer: "Ericsson / Nokia",
         quantity: 12,
